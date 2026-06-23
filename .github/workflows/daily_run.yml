@@ -1,0 +1,57 @@
+name: VF75 Strategy Daily Run
+
+on:
+  schedule:
+    - cron: '35 20 * * 1-5'   # 4:35pm EDT (20:35 UTC), weekdays Mon-Fri
+  workflow_dispatch:           # manual trigger from GitHub UI
+
+permissions:
+  contents: write
+
+jobs:
+  daily-run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4.2.2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Pull latest code
+        run: |
+          git config --global user.name  "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git pull origin main
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5.6.0
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run daily pipeline
+        run: python scripts/run_daily.py
+        env:
+          PYTHONPATH: ${{ github.workspace }}/scripts
+
+      - name: Commit updated data + dashboard
+        run: |
+          git add data/vx_history.csv   \
+                  data/features.csv      \
+                  data/option_price.csv  \
+                  data/daily_log.csv     \
+                  data/trades.csv        \
+                  data/position.json     \
+                  data/signal.json       \
+                  dashboard/index.html
+
+          git diff --staged --quiet && echo "Nothing to commit" || \
+            git commit -m "Daily update $(date -u +'%Y-%m-%d')"
+
+          git push origin main || \
+            (git pull --rebase -X theirs origin/main && git push origin main)
