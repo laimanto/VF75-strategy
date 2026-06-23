@@ -23,8 +23,7 @@ from scipy.stats import norm
 
 BASE_DIR = Path(__file__).parent.parent
 DATA_DIR = BASE_DIR / 'data'
-DASH_DIR = BASE_DIR / 'dashboard'
-DASH_DIR.mkdir(exist_ok=True)
+DASH_DIR = BASE_DIR          # serve index.html from repo root for GitHub Pages
 
 # Strategy constants
 R         = 0.045

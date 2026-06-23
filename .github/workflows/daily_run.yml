@@ -48,7 +48,7 @@ jobs:
                   data/trades.csv        \
                   data/position.json     \
                   data/signal.json       \
-                  dashboard/index.html
+                  index.html
 
           git diff --staged --quiet && echo "Nothing to commit" || \
             git commit -m "Daily update $(date -u +'%Y-%m-%d')"
