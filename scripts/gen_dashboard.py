@@ -19,6 +19,7 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+from scipy.optimize import brentq
 from scipy.stats import norm
 
 BASE_DIR = Path(__file__).parent.parent
@@ -110,8 +111,6 @@ def main():
 
     cur_strike   = next_even(cur_vf75 * K_MULT)
     cur_b76mid   = b76(cur_vf75, cur_strike, TENOR / 365, cur_sigma)
-    cur_theta_pct= ((b76(cur_vf75, cur_strike, max(0,(TENOR-1)/365), cur_sigma) - cur_b76mid)
-                    / cur_b76mid * 100) if cur_b76mid > 0 else 0.0
     spike_level  = cur_mu84 + SPIKE_M * cur_sd84 if cur_sd84 > 0 else None
     spike_str    = fn(spike_level) if spike_level else '—'
     gap          = (cur_ema63 - cur_vf75) / cur_ema63 if cur_ema63 > 0 else 0
@@ -162,6 +161,22 @@ def main():
             cur_option_expiry = last_op.get('expiry', '—')
         if in_pos and entry_mid > 0:
             cur_roi = (cur_mid_live - entry_mid) / entry_mid * 100
+
+    # Market-implied vol: back-solve from real market mid; fall back to VVIX/100
+    cur_iv_mid = cur_sigma
+    ref_price  = cur_mid_live if cur_mid_live > 0 else cur_b76mid
+    if ref_price > 0 and cur_vf75 > 0:
+        try:
+            cur_iv_mid = brentq(
+                lambda s: b76(cur_vf75, cur_strike, TENOR / 365, s) - ref_price,
+                0.01, 5.0
+            )
+        except Exception:
+            pass
+
+    # Theta: daily decay as % of market price, using market-consistent IV
+    cur_theta_pct = ((b76(cur_vf75, cur_strike, max(0, (TENOR - 1) / 365), cur_iv_mid)
+                      - ref_price) / ref_price * 100) if ref_price > 0 else 0.0
 
     # ── Performance stats ─────────────────────────────────────────────────────
     total_roi = sum(float(r['roi_pct']) for r in closed if r.get('roi_pct'))
@@ -503,8 +518,10 @@ td.green{{color:#3fb950}}td.red{{color:#f85149}}
       <span class="v">{fn(cur_vf75)}</span></div>
     <div class="pos-row"><span class="k">Entry sigma</span>
       <span class="v">{s_entry_sigma}</span></div>
-    <div class="pos-row"><span class="k">Current sigma</span>
-      <span class="v">{fn(cur_sigma)}</span></div>
+    <div class="pos-row"><span class="k">VVIX/100 (proxy σ)</span>
+      <span class="v gray">{fn(cur_sigma)}</span></div>
+    <div class="pos-row"><span class="k">Market IV (from mid)</span>
+      <span class="v">{fn(cur_iv_mid, 4)} ({fn(cur_iv_mid * 100, 2)}%)</span></div>
     <div class="pos-row"><span class="k">Theta (decay/day)</span>
       <span class="v red">{cur_theta_pct:.2f}%/day</span></div>
     <div class="pos-row"><span class="k">Adaptive SL</span>
@@ -579,8 +596,8 @@ td.green{{color:#3fb950}}td.red{{color:#f85149}}
         <input type="range" id="calcVF" min="10" max="60" step="0.01" value="{cur_vf75:.3f}" oninput="updateCalc()">
       </div>
       <div class="slider-group">
-        <label>sigma_now (current) <span id="calcSigVal">{cur_sigma:.3f}</span></label>
-        <input type="range" id="calcSig" min="0.50" max="3.00" step="0.001" value="{cur_sigma:.3f}" oninput="updateCalc()">
+        <label>Implied Vol σ (market IV) <span id="calcSigVal">{cur_iv_mid:.3f}</span></label>
+        <input type="range" id="calcSig" min="0.50" max="3.00" step="0.001" value="{cur_iv_mid:.3f}" oninput="updateCalc()">
       </div>
       <div class="slider-group">
         <label>Days Held <span id="calcDaysVal">{days_held}</span></label>
@@ -599,6 +616,9 @@ td.green{{color:#3fb950}}td.red{{color:#f85149}}
       <div class="calc-row"><span class="ck">Current Ask (buy at)</span><span class="cv white" id="cAsk">—</span></div>
       <div class="calc-row"><span class="ck">Days Remaining</span><span class="cv white" id="cDaysLeft">—</span></div>
       <div class="calc-row"><span class="ck">Theta (decay/day)</span><span class="cv red" id="cTheta">—</span></div>
+      <div class="calc-row"><span class="ck">Delta</span><span class="cv white" id="cDelta">—</span></div>
+      <div class="calc-row"><span class="ck">Gamma</span><span class="cv white" id="cGamma">—</span></div>
+      <div class="calc-row"><span class="ck">Vega (per 1% IV)</span><span class="cv white" id="cVega">—</span></div>
       <div style="margin-top:12px;padding:12px 14px;background:#0a1628;border:1px solid #1f6feb;border-radius:6px;text-align:center">
         <div style="font-size:11px;color:#8b949e;letter-spacing:.6px;text-transform:uppercase;margin-bottom:4px">Current Trade ROI <span style="font-size:10px">(mid vs entry mid)</span></div>
         <div id="cROI" style="font-size:36px;font-weight:800;line-height:1.1">—</div>
@@ -690,12 +710,15 @@ function b76(F,K,T,sig,r){{
 function nextEven(x){{return Math.ceil(x/2)*2;}}
 function bid(m){{return Math.max(0,m-0.01);}}
 function ask_(m){{return m+0.01;}}
+function normPDF(x){{return Math.exp(-0.5*x*x)/Math.sqrt(2*Math.PI);}}
 function fmtROI(v){{const s=v>=0?'+':'';return `<span style="color:${{v>=0?'#3fb950':'#f85149'}}">${{s}}${{v.toFixed(1)}}%</span>`;}}
 function fmtN(v,d=3){{return parseFloat(v.toFixed(d)).toString();}}
 
 const R=0.045, TENOR=75;
-const CUR_VF={cur_vf75:.3f}, CUR_SIG={cur_sigma:.3f};
-// ENTRY_SIGMA: actual sigma recorded at entry; defaults to cur_sigma when OUT
+const CUR_VF={cur_vf75:.3f};
+const VVIX_SIG={cur_sigma:.3f};      // VVIX/100 — used for strategy signal conditions
+const CUR_IV_MID={cur_iv_mid:.4f};  // market-implied vol from real mid price
+// ENTRY_SIGMA: actual sigma recorded at entry; defaults to VVIX/100 when OUT
 const ENTRY_SIGMA={entry_sigma:.3f};
 // ENTRY_MID_FIXED: real market mid paid at entry (0 = not in position)
 const ENTRY_MID_FIXED={entry_mid:.4f};
@@ -815,11 +838,19 @@ function updateCalc(){{
   const mid=b76(F,K,T,sig,R);
   const b  =bid(mid),a=ask_(mid);
   const th =T>1/365?((b76(F,K,T-1/365,sig,R)-mid)/mid*100):0;
+  const sqrtT=T>0?Math.sqrt(T):0;
+  const d1  =T>0?(Math.log(F/K)+0.5*sig*sig*T)/(sig*sqrtT):Infinity;
+  const delta=T>0?Math.exp(-R*T)*normCDF(d1):(F>K?1:0);
+  const gamma=T>0?Math.exp(-R*T)*normPDF(d1)/(F*sig*sqrtT):0;
+  const vega =T>0?F*Math.exp(-R*T)*normPDF(d1)*sqrtT*0.01:0; // per 1% IV move
   document.getElementById('cMid').textContent    ='$'+fmtN(mid);
   document.getElementById('cBid').textContent    ='$'+fmtN(b);
   document.getElementById('cAsk').textContent    ='$'+fmtN(a);
   document.getElementById('cDaysLeft').textContent=Math.max(0,TENOR-d)+' days';
   document.getElementById('cTheta').textContent  =th.toFixed(2)+'%/day';
+  document.getElementById('cDelta').textContent  =fmtN(delta,4);
+  document.getElementById('cGamma').textContent  =fmtN(gamma,5);
+  document.getElementById('cVega').textContent   ='$'+fmtN(vega,4);
   document.getElementById('cROI').innerHTML=fmtROI((mid-entryMid)/entryMid*100);
 
   // VF75 sensitivity chart (mid prices; ROI vs entry mid)
@@ -875,7 +906,7 @@ function updateCalc(){{
 // Init calculator
 document.getElementById('calcEntryVF').value={s_calc_entry_vf};
 document.getElementById('calcVF').value      ={cur_vf75:.3f};
-document.getElementById('calcSig').value     ={cur_sigma:.3f};
+document.getElementById('calcSig').value     ={cur_iv_mid:.4f};
 updateCalc();
 </script>
 </body>
