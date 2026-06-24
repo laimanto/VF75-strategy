@@ -774,7 +774,7 @@ const exitLx ={js(exit_l_x)},  exitLy ={js(exit_l_y)};
     xaxis:{{gridcolor:'#21262d',rangeslider:{{visible:true,thickness:0.04}},type:'date'}},
     yaxis:{{title:'Price',gridcolor:'#21262d'}},
     legend:{{orientation:'h',y:-0.18,font:{{size:10}}}},
-    margin:{{t:30,r:20,b:60,l:55}},hovermode:'closest',
+    margin:{{t:30,r:20,b:60,l:55}},hovermode:'closest',dragmode:'pan',
     annotations:[{{
       xref:'paper',yref:'paper',x:0.01,y:0.97,xanchor:'left',yanchor:'top',
       text:`VF75 {fn(cur_vf75)} | VIX {cur_vix:.2f} | EMA {fn(cur_ema63)} | σ {fn(cur_sigma)} | Spike {spike_str}`,
@@ -782,7 +782,7 @@ const exitLx ={js(exit_l_x)},  exitLy ={js(exit_l_y)};
       bgcolor:'rgba(13,17,23,0.7)',bordercolor:'#30363d',borderwidth:1
     }}]
   }};
-  Plotly.newPlot('priceChart',traces,layout,{{responsive:true}});
+  Plotly.newPlot('priceChart',traces,layout,{{responsive:true,scrollZoom:true}});
 }})();
 
 // ── ROI charts ──────────────────────────────────────────────────────────────────

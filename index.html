@@ -82,7 +82,7 @@ td.green{color:#3fb950}td.red{color:#f85149}
     <div class="sub">manual_v33 &nbsp;|&nbsp; B76 pricing &nbsp;|&nbsp; Adaptive SL &nbsp;|&nbsp; CBOE VX futures</div>
   </div>
   <div class="header-right">
-    <div>Updated: <strong>2026-06-23 22:58 ET</strong></div>
+    <div>Updated: <strong>2026-06-23 23:21 ET</strong></div>
     <div>Data date: <strong>2026-06-23</strong></div>
   </div>
 </header>
@@ -486,7 +486,7 @@ const exitLx =[],  exitLy =[];
     xaxis:{gridcolor:'#21262d',rangeslider:{visible:true,thickness:0.04},type:'date'},
     yaxis:{title:'Price',gridcolor:'#21262d'},
     legend:{orientation:'h',y:-0.18,font:{size:10}},
-    margin:{t:30,r:20,b:60,l:55},hovermode:'closest',
+    margin:{t:30,r:20,b:60,l:55},hovermode:'closest',dragmode:'pan',
     annotations:[{
       xref:'paper',yref:'paper',x:0.01,y:0.97,xanchor:'left',yanchor:'top',
       text:`VF75 20.613 | VIX 19.49 | EMA 21.426 | σ 0.995 | Spike 24.639`,
@@ -494,7 +494,7 @@ const exitLx =[],  exitLy =[];
       bgcolor:'rgba(13,17,23,0.7)',bordercolor:'#30363d',borderwidth:1
     }]
   };
-  Plotly.newPlot('priceChart',traces,layout,{responsive:true});
+  Plotly.newPlot('priceChart',traces,layout,{responsive:true,scrollZoom:true});
 })();
 
 // ── ROI charts ──────────────────────────────────────────────────────────────────
