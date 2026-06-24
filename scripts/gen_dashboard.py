@@ -85,6 +85,8 @@ def main():
                 if (DATA_DIR / 'position.json').exists() else {}
     signal_j  = json.loads((DATA_DIR / 'signal.json').read_text()) \
                 if (DATA_DIR / 'signal.json').exists() else {}
+    fetched   = json.loads((DATA_DIR / 'fetched.json').read_text()) \
+                if (DATA_DIR / 'fetched.json').exists() else {}
 
     trades_rows = list(csv.DictReader(open(DATA_DIR / 'trades.csv', encoding='utf-8')))
     closed      = [r for r in trades_rows if r.get('exit_date', '')]
@@ -144,11 +146,20 @@ def main():
         hd_dt       = entry_dt + __import__('datetime').timedelta(days=TENOR)
         hard_deadline = hd_dt.strftime('%Y-%m-%d')
 
-    # Last option_price.csv row for live mid price
+    # Current option market data — prefer fetched.json (today's real data), fall back to option_price.csv
+    cur_bid          = float(fetched.get('option_bid', 0))
+    cur_ask          = float(fetched.get('option_ask', 0))
+    cur_option_expiry = fetched.get('option_expiry', '—')
     op_rows = list(csv.DictReader(open(DATA_DIR / 'option_price.csv', encoding='utf-8')))
     if op_rows:
         last_op      = op_rows[-1]
         cur_mid_live = float(last_op.get('option_mid', cur_b76mid))
+        if cur_bid == 0:
+            cur_bid = float(last_op.get('option_bid', 0))
+        if cur_ask == 0:
+            cur_ask = float(last_op.get('option_ask', 0))
+        if cur_option_expiry == '—':
+            cur_option_expiry = last_op.get('expiry', '—')
         if in_pos and entry_mid > 0:
             cur_roi = (cur_mid_live - entry_mid) / entry_mid * 100
 
@@ -268,7 +279,10 @@ def main():
     s_entry_vf75   = fn(entry_vf75)          if in_pos else '—'
     s_entry_sigma  = fn(entry_sigma)         if in_pos else '—'
     s_entry_mid    = f'${fn(entry_mid)}'     if in_pos else '—'
-    s_cur_mid      = f'${fn(cur_mid_live)}'  if in_pos else '—'
+    s_cur_mid      = f'${fn(cur_mid_live)}'  if cur_mid_live > 0 else '—'
+    s_bid          = f'${fn(cur_bid)}'       if cur_bid > 0 else '—'
+    s_ask          = f'${fn(cur_ask)}'       if cur_ask > 0 else '—'
+    show_expiry    = entry_expiry if (in_pos and entry_expiry != '—') else cur_option_expiry
     s_days_held    = str(days_held)          if in_pos else '—'
     s_days_left    = str(cal_days_left)      if in_pos else '—'
     sl_now         = sl_entry if in_pos else sl_level
@@ -491,29 +505,31 @@ td.green{{color:#3fb950}}td.red{{color:#f85149}}
       <span class="v">{s_entry_sigma}</span></div>
     <div class="pos-row"><span class="k">Current sigma</span>
       <span class="v">{fn(cur_sigma)}</span></div>
-    <div class="pos-row"><span class="k">Market mid (now)</span>
-      <span class="v">${fn(cur_mid_live)}</span></div>
-    <div class="pos-row"><span class="k">B76 theo (now)</span>
-      <span class="v gray">${fn(cur_b76mid)}</span></div>
     <div class="pos-row"><span class="k">Theta (decay/day)</span>
       <span class="v red">{cur_theta_pct:.2f}%/day</span></div>
     <div class="pos-row"><span class="k">Adaptive SL</span>
       <span class="v">{s_sl_regime}</span></div>
-    <div class="pos-row"><span class="k">Entry mid (paid)</span>
-      <span class="v">{s_entry_mid}</span></div>
     <div class="pos-row"><span class="k">Current ROI</span>
       <span class="v {pos_roi_cls}">{pos_roi_str}</span></div>
   </div>
   <div class="pos-group">
-    <h3>Option</h3>
+    <h3>Option{'  (in position)' if in_pos else '  (target)'}</h3>
     <div class="pos-row"><span class="k">Strike K</span>
       <span class="v">{entry_strike if in_pos else cur_strike}</span></div>
-    <div class="pos-row"><span class="k">Option expiry</span>
-      <span class="v">{entry_expiry}</span></div>
+    <div class="pos-row"><span class="k">Expiry</span>
+      <span class="v">{show_expiry}</span></div>
+    <div class="pos-row"><span class="k">Bid</span>
+      <span class="v">{s_bid}</span></div>
+    <div class="pos-row"><span class="k">Ask</span>
+      <span class="v">{s_ask}</span></div>
+    <div class="pos-row"><span class="k">Mid (market)</span>
+      <span class="v green">{s_cur_mid}</span></div>
+    <div class="pos-row"><span class="k">B76 theo</span>
+      <span class="v gray">${fn(cur_b76mid)}</span></div>
     <div class="pos-row"><span class="k">Tenor</span>
       <span class="v">75 calendar days</span></div>
-    <div class="pos-row"><span class="k">Live mid</span>
-      <span class="v green">{s_cur_mid}</span></div>
+    <div class="pos-row"><span class="k">Entry mid (paid)</span>
+      <span class="v">{s_entry_mid}</span></div>
     <div class="pos-row"><span class="k">Spike TP level</span>
       <span class="v orange">{spike_str}</span></div>
     <div class="pos-row"><span class="k">SL trigger price</span>
