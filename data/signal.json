@@ -6,42 +6,42 @@
   "conditions": {
     "pct_rank84": {
       "met": true,
-      "value": 0.036,
+      "value": 0.072,
       "threshold": "<= 0.5"
     },
     "macd_5_13": {
       "met": false,
-      "value": -0.2195,
+      "value": -0.1778,
       "threshold": "> 0"
     },
     "roc_3m": {
       "met": false,
-      "value": -12.82,
+      "value": -16.36,
       "threshold": ">= -8.0%"
     },
     "roc_1m": {
-      "met": false,
-      "value": -5.75,
+      "met": true,
+      "value": -4.62,
       "threshold": ">= -5.0%"
     },
     "vf75_below_ema63": {
       "met": true,
-      "value": 20.178,
-      "threshold": "< EMA63 (21.426)"
+      "value": 20.647,
+      "threshold": "< EMA63 (21.402)"
     },
     "ema63_gap": {
       "met": false,
-      "value": 5.83,
+      "value": 3.53,
       "threshold": "<= 3.5000000000000004%"
     },
     "atr10_filter": {
-      "met": true,
-      "value": -0.079,
+      "met": false,
+      "value": -1.396,
       "threshold": "> -1.0"
     },
     "vix_spread": {
       "met": true,
-      "value": -1.12,
+      "value": -2.02,
       "threshold": "< -1.0"
     },
     "sl_cooldown": {
