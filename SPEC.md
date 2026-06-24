@@ -9,7 +9,7 @@
 
 This system trades a single VIX call option position at a time. It is built around a set of momentum and mean-reversion rules applied to VF75, a synthetic 75-day constant-maturity VX futures price. When all entry conditions are met it buys a VIX call at the M3 expiry. It holds until one of five exit conditions fires or the 75-day hard deadline expires.
 
-The daily pipeline runs at 4:35 pm EDT on GitHub Actions, updates all data files in the repo, and publishes a live dashboard to GitHub Pages.
+The daily pipeline runs at 4:35 pm EST / 5:35 pm EDT (21:35 UTC) on GitHub Actions, updates all data files in the repo, and publishes a live dashboard to GitHub Pages.
 
 ---
 
@@ -23,7 +23,7 @@ production_manual_v33/
 ├── data/
 │   ├── vx_history.csv             # VX60d, VX90d, VF75, VVIX, VIX — one row per trading day
 │   ├── features.csv               # all derived features — one row per trading day
-│   ├── option_price.csv           # daily M3 option market mid — one row per trading day
+│   ├── option_price.csv           # daily M3 option market prices — one row per trading day
 │   ├── trades.csv                 # closed trade log
 │   ├── daily_log.csv              # in-position daily ROI log (reset each new trade)
 │   ├── position.json              # current open position (or out-of-position state)
@@ -35,8 +35,9 @@ production_manual_v33/
 │   ├── eval_signal.py             # rule-based signal evaluation
 │   ├── run_daily.py               # master orchestrator
 │   └── gen_dashboard.py           # HTML dashboard generator
-├── dashboard/
-│   └── index.html                 # generated daily; served via GitHub Pages
+├── index.html                     # generated daily; served via GitHub Pages (repo root)
+├── .nojekyll                      # prevents Jekyll from processing Plotly template strings
+├── .gitattributes                 # enforces LF line endings
 ├── requirements.txt
 └── .gitignore
 ```
@@ -56,14 +57,17 @@ yfinance has no historical option data API. Every row in `option_price.csv` is p
 | **VX90d** | VX price interpolated to 90-day constant maturity from surrounding contracts |
 | **M3 contract** | First VX futures contract with DTE ≥ 60 from today (typically ~85 days out) |
 | **M3 option** | VIX call option whose expiry matches the M3 VX contract settlement date |
-| **sigma_now** | VVIX / 100, floored at 0.80 |
+| **VVIX/100** | VVIX / 100, floored at 0.80 — used as sigma proxy for strategy signal conditions |
+| **Market IV** | Implied volatility back-solved from real market mid price using B76 — used for greeks |
 | **ema63** | Exponential moving average of VF75, span = 63 trading days (~3 months) |
 | **MACD(5,13)** | EMA(5) − EMA(13) of VF75 |
 | **roll_mu / roll_sd** | Rolling 84-day mean and std dev of VF75 |
 | **roll_rank** | Percentile rank of current VF75 within 84-day window |
 | **spike_level** | roll_mu + 2 × roll_sd |
-| **B76** | Black-76 call price: F=VF75, K=strike, T=DTE/365, σ=sigma_now, r=4.5% |
-| **entry_mid** | Real market mid = (bid + ask) / 2 at time of entry |
+| **B76** | Black-76 call price: F=VF75, K=strike, T=DTE/365, σ=VVIX/100, r=4.5% — reference only |
+| **option_mid** | Real market mid = (bid + ask) / 2 — used for all trade accounting |
+| **option_last** | Last traded price from yfinance; 0 if unavailable. Shown for reference only |
+| **entry_mid** | option_mid at time of entry, stored in position.json |
 
 ---
 
@@ -76,8 +80,8 @@ yfinance has no historical option data API. Every row in `option_price.csv` is p
 | Underlying | VIX call option | Option chain via yfinance `^VIX` |
 | Strike K | next_even(VF75 × 1.05) | Next even integer ≥ VF75 × 5% OTM |
 | Expiry | M3 settlement date | First VX contract with DTE ≥ 60 |
-| Entry price | market mid = (bid + ask) / 2 | Stored in position.json as `entry_mid` |
-| Exit price | market mid = (bid + ask) / 2 | |
+| Entry price | `option_mid` = (bid + ask) / 2 | Real market mid; stored as `entry_mid` |
+| Exit price | `option_mid` = (bid + ask) / 2 | Real market mid at exit |
 | ROI | (exit_mid − entry_mid) / entry_mid × 100 | Simple pct; total ROI = additive sum |
 
 ### 4.2 Feature Constants
@@ -181,8 +185,34 @@ roc_3m, roc_1m, vix_spread, spike_level, atr10, vf75_change_10d_atr
 date, vf75, strike, expiry, option_mid, option_bid, option_ask,
 sigma_now, b76_mid, days_held, in_position
 ```
-`option_mid` = (bid + ask) / 2. `b76_mid` is theoretical Black-76 mid kept for reference.  
+`option_mid` = (bid + ask) / 2. `sigma_now` = VVIX/100 stored at fetch time. `b76_mid` is theoretical Black-76 kept for reference only.  
 **Append-only. Never clear.**
+
+### `data/fetched.json`
+Key fields written each day:
+```json
+{
+  "fetch_date":    "2026-06-23",
+  "vf75":          20.178,
+  "vx60d":         19.748,
+  "vx90d":         20.607,
+  "vix":           19.49,
+  "vvix":          99.5,
+  "sigma_now":     0.9619,
+  "strike":        22,
+  "option_mid":    2.70,
+  "option_last":   1.85,
+  "option_bid":    2.30,
+  "option_ask":    3.10,
+  "option_expiry": "2026-09-16",
+  "b76_mid":       2.9936,
+  "days_held":     0,
+  "in_position":   false
+}
+```
+`option_last` = last traded price from yfinance (`lastPrice`); 0 if unavailable.  
+`option_mid` = (bid + ask) / 2; used for all ROI accounting.  
+`b76_mid` = Black-76 theoretical at M3 DTE; reference only.
 
 ### `data/trades.csv`
 ```
@@ -190,7 +220,7 @@ trade_id, entry_date, entry_vf75, strike, entry_mid, expiry,
 exit_date, exit_vf75, exit_mid, days_held, roi_pct, exit_reason,
 sd84_at_entry, sl_used, notes
 ```
-`entry_mid` and `exit_mid` are real market mids, not theoretical.  
+`entry_mid` and `exit_mid` are real market mids ((bid+ask)/2), not theoretical.  
 **Append-only. Never clear.**
 
 ### `data/daily_log.csv`
@@ -299,9 +329,11 @@ The remaining data files (`trades.csv`, `option_price.csv`, `daily_log.csv`, `po
 ### 8.5 Enable GitHub Pages
 
 In the repository settings:  
-**Settings → Pages → Source: Deploy from branch `main`, folder `/dashboard`**
+**Settings → Pages → Source: Deploy from branch `main`, folder `/` (root)**
 
 The dashboard will be live at `https://<username>.github.io/<repo-name>/`.
+
+The `.nojekyll` file at repo root is required — without it, Jekyll strips `{{` and `}}` from the Plotly JavaScript and breaks all charts.
 
 ---
 
@@ -309,7 +341,7 @@ The dashboard will be live at `https://<username>.github.io/<repo-name>/`.
 
 ### 9.1 GitHub Actions Schedule
 
-- **Trigger:** `cron: '35 20 * * 1-5'` — 4:35 pm EDT (20:35 UTC), Monday–Friday
+- **Trigger:** `cron: '35 21 * * 1-5'` — 21:35 UTC = 4:35 pm EST / 5:35 pm EDT, Monday–Friday
 - **Manual trigger:** available via `workflow_dispatch` in GitHub UI
 - **Timeout:** 20 minutes
 - **Runs on:** `ubuntu-latest`
@@ -321,12 +353,13 @@ run_daily.py
   ├── 1. fetch_data.py
   │       ├── Download M1–M5 per-contract CSVs from CBOE
   │       ├── Interpolate → VX60d, VX90d, VF75
-  │       ├── Identify M3 contract (first with DTE ≥ 60)
+  │       ├── Identify M3 contract (first with DTE ≥ 60) → M3 expiry date
   │       ├── Fetch ^VVIX and ^VIX from yfinance
   │       ├── Append row to vx_history.csv
   │       ├── Recompute rolling features → append row to features.csv
   │       ├── Fetch VIX call option at M3 expiry from yfinance
-  │       │       mid = (bid + ask) / 2
+  │       │       option_last = lastPrice (0 if unavailable)
+  │       │       option_mid  = (bid + ask) / 2
   │       ├── Append row to option_price.csv
   │       └── Write fetched.json
   ├── 2. eval_signal.py
@@ -342,7 +375,7 @@ run_daily.py
   ├── 4. append_daily_log()
   │       └── If in position: append one row to daily_log.csv with today's mid and ROI
   └── 5. gen_dashboard.py
-          └── Generate dashboard/index.html from all data files
+          └── Generate index.html at repo root from all data files
 ```
 
 ### 9.3 CBOE Data Fetch
@@ -355,7 +388,7 @@ URL: https://cdn.cboe.com/data/us/futures/market_statistics/historical_data/VX/V
 
 Where `{settle}` is the settlement date in `YYYY-MM-DD` format. The file contains the full price history for that contract. The function extracts today's closing price from the row matching today's date.
 
-**Fallback:** If CBOE download fails, the last row of `vx_history.csv` is used for VX values (prices are stable day-to-day). If the option fetch fails, the B76 theoretical price is used as the fallback mid.
+**Fallback:** If CBOE download fails, the last row of `vx_history.csv` is used for VX values. If the option fetch fails, B76 theoretical price is used as the fallback mid.
 
 ### 9.4 VX Interpolation
 
@@ -375,21 +408,24 @@ Linear interpolation between the two bracketing contracts for each target DTE.
 strike = next_even(VF75 × 1.05)        # 5% OTM call, rounded to next even integer
 expiry = M3 settlement date             # first VX contract with DTE >= 60
 
-# When OUT of position: use today's M3 expiry
-# When IN position: use expiry stored in position.json (the option actually bought)
+# Priority when computing mid:
+if bid > 0 and ask > 0:
+    option_mid = (bid + ask) / 2
+else:
+    option_mid = lastPrice              # market closed / illiquid
 
-mid = (bid + ask) / 2                   # from yfinance VIX option chain
+option_last = lastPrice if lastPrice > 0 else 0.0
 ```
 
-If `bid > 0` and `ask > 0`: `mid = (bid + ask) / 2`  
-If both zero: `mid = lastPrice` (market closed / no quote)  
-If no price at all: fall back to B76 theoretical
+`option_mid` is always (bid+ask)/2 when the market is open and quotes are available. `option_last` is the most recent exchange trade price, kept separately for reference. If neither is available, fall back to B76 theoretical.
 
 ### 9.6 Trade ROI
 
 ```
 ROI = (exit_mid - entry_mid) / entry_mid × 100
 ```
+
+Both `entry_mid` and `exit_mid` are real market mids ((bid+ask)/2), never theoretical B76 prices.
 
 **Total portfolio ROI** = simple additive sum of all `roi_pct` values in `trades.csv`. Never use multiplicative compounding.
 
@@ -405,7 +441,7 @@ data/daily_log.csv
 data/trades.csv
 data/position.json
 data/signal.json
-dashboard/index.html
+index.html
 ```
 
 If `git push` fails due to a concurrent push, it retries with `git pull --rebase -X theirs`.
@@ -435,28 +471,52 @@ python scripts/run_daily.py --skip-fetch --skip-signal
 
 ## 11. Dashboard
 
-`dashboard/index.html` is generated by `gen_dashboard.py` after every pipeline run.
+`index.html` is generated at repo root by `gen_dashboard.py` after every pipeline run. GitHub Pages serves it from the repo root (`/`). Timestamp shown in Toronto / Eastern time.
 
 ### Sections
 
 | Section | Contents |
 |---------|----------|
-| **Status bar** | Signal (WAIT / IN / ENTRY), VF75, VIX, sigma, EMA63 |
+| **Header** | Strategy name; last updated timestamp (ET); data date |
+| **Market Snapshot** | Signal (WAIT / IN / ENTRY), VF75, VIX, VVIX/100, EMA63, Strike K, Mid (bid+ask)/2 |
 | **Entry conditions** | All 9 conditions with current value, threshold, pass/fail |
 | **VF75 price chart** | Price history from 2025, with EMA63, spike level, EMA floor, trade entry/exit markers |
 | **MACD chart** | MACD(5,13) with zero line |
-| **Sigma chart** | sigma_now with 1.50 vol-exit threshold |
-| **Position detail** | Entry VF75, sigma, entry mid, current mid, ROI, days held/left, SL regime, SL trigger price |
-| **B76 Calculator** | Interactive sliders for VF75, sigma, days held; auto-computes entry mid (real price if in position, B76 theoretical if out); ROI charts vs VF75 and vs days |
+| **Sigma chart** | VVIX/100 with 1.50 vol-exit threshold |
+| **Position detail** | Three panels: VF75 & Volatility, Option (target/in-position), Time & Dates |
+| **B76 Calculator** | Interactive sliders for VF75, sigma (defaults to market IV), days held; delta/gamma/vega output |
 | **Performance stats** | Total ROI, trades, win rate, average ROI, average hold, SL count |
 | **Trade history** | Table of all closed trades |
 
+### Option Panel (Position Detail)
+
+Always shown regardless of whether a position is open:
+
+| Field | Source | Notes |
+|-------|--------|-------|
+| Strike K | position.json (in) / computed (out) | next_even(VF75×1.05) |
+| Expiry | position.json (in) / fetched.json (out) | M3 settlement date |
+| Last Price | fetched.json `option_last` | Last exchange trade; `—` if unavailable |
+| Bid | fetched.json `option_bid` | |
+| Ask | fetched.json `option_ask` | |
+| Mid (bid+ask)/2 | fetched.json `option_mid` | Used for ROI accounting |
+| B76 theo | computed | VVIX/100 sigma; reference only |
+| Entry mid (paid) | position.json `entry_mid` | `—` when out of position |
+
+### Volatility Panel (Position Detail)
+
+| Field | Value |
+|-------|-------|
+| VVIX/100 (proxy σ) | VVIX / 100; floored at 0.80; used for signal conditions |
+| Market IV (from mid) | Implied vol back-solved from real market mid via B76; used for greeks and calculator |
+
 ### Calculator Behavior
 
-- **Entry mid:** When in position = `entry_mid` from `position.json` (real market price paid). When out = B76 theoretical at current parameters.
-- **Current mid:** B76 at slider values (theoretical, for what-if scenarios).
+- **Sigma slider:** defaults to **Market IV** (back-solved from real market mid), not VVIX/100
+- **Entry mid:** When in position = `entry_mid` from `position.json`. When out = current mid price (bid+ask)/2
+- **Current B76 mid:** B76 at slider VF75 / sigma / days values
+- **Delta / Gamma / Vega:** computed live from slider values using market-consistent sigma
 - **ROI:** (current B76 mid − entry mid) / entry mid × 100
-- Moving sliders updates only the current price; entry mid stays fixed.
 
 ---
 
@@ -475,8 +535,10 @@ python scripts/run_daily.py --skip-fetch --skip-signal
 
 ## 13. Environment Notes
 
-- **Python version:** 3.11 (required for `dict | None` type hints)
+- **Python version:** 3.11 (required for `dict | None` type hints and `zoneinfo`)
 - **Trading days:** Counted as Monday–Friday only; no holiday calendar
-- **Timezone:** All dates are US Eastern. The effective date logic in `fetch_data.py` uses 4:35 pm EDT as the close cutoff
-- **B76 formula:** Uses `scipy.stats.norm` for N(d1) and N(d2)
+- **Timezone:** Dashboard timestamp in America/Toronto (Eastern). All dates are US Eastern.
+- **B76 formula:** Uses `scipy.stats.norm` for N(d1)/N(d2); `scipy.optimize.brentq` to back-solve Market IV
 - **Strike rounding:** `next_even(x) = ceil(x/2) * 2` — smallest even integer ≥ x
+- **GitHub Pages:** Source = branch `main`, folder `/` (root). `.nojekyll` required at root
+- **Git path (Windows local):** `C:\Users\laima\AppData\Local\GitHubDesktop\app-3.5.12\resources\app\git\cmd\git.exe`
