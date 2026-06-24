@@ -791,7 +791,7 @@ function updateCalc(){{
   const entryLabel = ENTRY_MID_FIXED > 0
     ? '$'+fmtN(entryMid)+' (market mid paid at entry)'
     : CUR_MID_MARKET > 0
-    ? '$'+fmtN(entryMid)+' (today\'s market mid, K='+K+')'
+    ? '$'+fmtN(entryMid)+' (current market mid, K='+K+')'
     : '$'+fmtN(entryMid)+' (B76 theoretical, K='+K+')';
   document.getElementById('cEntryOut').textContent=entryLabel;
 

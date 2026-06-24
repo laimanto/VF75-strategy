@@ -82,7 +82,7 @@ td.green{color:#3fb950}td.red{color:#f85149}
     <div class="sub">manual_v33 &nbsp;|&nbsp; B76 pricing &nbsp;|&nbsp; Adaptive SL &nbsp;|&nbsp; CBOE VX futures</div>
   </div>
   <div class="header-right">
-    <div>Updated: <strong>2026-06-23 21:08 ET</strong></div>
+    <div>Updated: <strong>2026-06-23 22:20 ET</strong></div>
     <div>Data date: <strong>2026-06-23</strong></div>
   </div>
 </header>
@@ -533,7 +533,7 @@ function updateCalc(){
   const entryLabel = ENTRY_MID_FIXED > 0
     ? '$'+fmtN(entryMid)+' (market mid paid at entry)'
     : CUR_MID_MARKET > 0
-    ? '$'+fmtN(entryMid)+' (today's market mid, K='+K+')'
+    ? '$'+fmtN(entryMid)+' (current market mid, K='+K+')'
     : '$'+fmtN(entryMid)+' (B76 theoretical, K='+K+')';
   document.getElementById('cEntryOut').textContent=entryLabel;
 
