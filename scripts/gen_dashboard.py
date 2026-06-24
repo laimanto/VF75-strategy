@@ -399,7 +399,6 @@ td.green{{color:#3fb950}}td.red{{color:#f85149}}
   <div class="header-right">
     <div>Updated: <strong>{gen_ts}</strong></div>
     <div>Data date: <strong>{cur_date}</strong></div>
-    <div>VF75: <strong>{fn(cur_vf75)}</strong> &nbsp; VIX: <strong>{cur_vix:.2f}</strong></div>
   </div>
 </header>
 <main>
