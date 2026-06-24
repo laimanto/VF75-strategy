@@ -187,7 +187,7 @@ def main():
         (c3, 'roc_3m',            f'{cur_roc3m:.1f}%',     f'≥ {ROC3M_MIN}%',      'No sustained 3-month decline'),
         (c4, 'roc_1m',            f'{cur_roc1m:.1f}%',     f'≥ {ROC1M_MIN}%',      'No sharp 1-month drop'),
         (c5, 'VF75 vs EMA(3m)',   fn(cur_vf75),            f'< {fn(cur_ema63)}',   'Dip below 3-month trend'),
-        (c6, 'EMA gap',           f'{gap*100:.2f}%',       f'≤ {MAX_GAP*100}%',    'Not in crash / freefall'),
+        (c6, 'EMA gap',           f'{gap*100:.2f}%',       f'≤ {fn(MAX_GAP*100)}%', 'Not in crash / freefall'),
         (c7, 'ATR10',             fn(cur_atr10),           f'> {ATR10_MIN}',       'No strong 10-day decline'),
         (c8, 'VIX spread',        f'{cur_spread:.2f}',     f'< {SPRD_MAX}',        'Normal contango (VF75>VIX)'),
     ]
