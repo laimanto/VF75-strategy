@@ -64,6 +64,12 @@ def fmt_roi(v, digits=1):
     return f'{sign}{v:.{digits}f}%'
 
 
+def fn(v, d=3):
+    """Format number with at most d decimal places, stripping trailing zeros."""
+    s = f'{v:.{d}f}'
+    return s.rstrip('0').rstrip('.')
+
+
 def main():
     today_str = str(date.today())
 
@@ -105,7 +111,7 @@ def main():
     cur_theta_pct= ((b76(cur_vf75, cur_strike, max(0,(TENOR-1)/365), cur_sigma) - cur_b76mid)
                     / cur_b76mid * 100) if cur_b76mid > 0 else 0.0
     spike_level  = cur_mu84 + SPIKE_M * cur_sd84 if cur_sd84 > 0 else None
-    spike_str    = f'{spike_level:.3f}' if spike_level else '—'
+    spike_str    = fn(spike_level) if spike_level else '—'
     gap          = (cur_ema63 - cur_vf75) / cur_ema63 if cur_ema63 > 0 else 0
 
     sl_regime    = 'calm'    if cur_sd84 < SD84_T else 'volatile'
@@ -176,14 +182,14 @@ def main():
     c8 = cmet('vix_spread',       cur_spread < SPRD_MAX)
 
     conditions = [
-        (c1, 'pct_rank(84d)',     f'{cur_rr:.2f}',       f'≤ {PCT_THRESH}',    'VF75 at/below 4-month median'),
-        (c2, 'MACD(5,13)',        f'{cur_macd:.3f}',     '> 0',                'Short-term momentum positive'),
-        (c3, 'roc_3m',            f'{cur_roc3m:.1f}%',   f'≥ {ROC3M_MIN}%',    'No sustained 3-month decline'),
-        (c4, 'roc_1m',            f'{cur_roc1m:.1f}%',   f'≥ {ROC1M_MIN}%',    'No sharp 1-month drop'),
-        (c5, 'VF75 vs EMA(3m)',   f'{cur_vf75:.3f}',     f'< {cur_ema63:.3f}', 'Dip below 3-month trend'),
-        (c6, 'EMA gap',           f'{gap*100:.2f}%',     f'≤ {MAX_GAP*100}%',  'Not in crash / freefall'),
-        (c7, 'ATR10',             f'{cur_atr10:.3f}',    f'> {ATR10_MIN}',     'No strong 10-day decline'),
-        (c8, 'VIX spread',        f'{cur_spread:.2f}',   f'< {SPRD_MAX}',      'Normal contango (VF75>VIX)'),
+        (c1, 'pct_rank(84d)',     f'{cur_rr:.2f}',         f'≤ {PCT_THRESH}',      'VF75 at/below 4-month median'),
+        (c2, 'MACD(5,13)',        fn(cur_macd),            '> 0',                  'Short-term momentum positive'),
+        (c3, 'roc_3m',            f'{cur_roc3m:.1f}%',     f'≥ {ROC3M_MIN}%',      'No sustained 3-month decline'),
+        (c4, 'roc_1m',            f'{cur_roc1m:.1f}%',     f'≥ {ROC1M_MIN}%',      'No sharp 1-month drop'),
+        (c5, 'VF75 vs EMA(3m)',   fn(cur_vf75),            f'< {fn(cur_ema63)}',   'Dip below 3-month trend'),
+        (c6, 'EMA gap',           f'{gap*100:.2f}%',       f'≤ {MAX_GAP*100}%',    'Not in crash / freefall'),
+        (c7, 'ATR10',             fn(cur_atr10),           f'> {ATR10_MIN}',       'No strong 10-day decline'),
+        (c8, 'VIX spread',        f'{cur_spread:.2f}',     f'< {SPRD_MAX}',        'Normal contango (VF75>VIX)'),
     ]
     all_entry = all([c1, c2, c3, c4, c5, c6, c7, c8]) and not in_pos
 
@@ -255,17 +261,17 @@ def main():
     gen_ts = datetime.now().strftime('%Y-%m-%d %H:%M ET')
 
     # ── Pre-compute display strings (avoid conditional exprs inside format specs) ─
-    s_entry_vf75   = f'{entry_vf75:.3f}'    if in_pos else '—'
-    s_entry_sigma  = f'{entry_sigma:.4f}'   if in_pos else '—'
-    s_entry_mid    = f'${entry_mid:.4f}'    if in_pos else '—'
-    s_cur_mid      = f'${cur_mid_live:.4f}' if in_pos else '—'
-    s_days_held    = str(days_held)         if in_pos else '—'
-    s_days_left    = str(cal_days_left)     if in_pos else '—'
+    s_entry_vf75   = fn(entry_vf75)          if in_pos else '—'
+    s_entry_sigma  = fn(entry_sigma)         if in_pos else '—'
+    s_entry_mid    = f'${fn(entry_mid)}'     if in_pos else '—'
+    s_cur_mid      = f'${fn(cur_mid_live)}'  if in_pos else '—'
+    s_days_held    = str(days_held)          if in_pos else '—'
+    s_days_left    = str(cal_days_left)      if in_pos else '—'
     sl_now         = sl_entry if in_pos else sl_level
-    s_sl_regime    = f'−{sl_now:.0f}% ({sl_regime} regime, sd84={"entry "+str(round(sd84_entry,2)) if in_pos else str(round(cur_sd84,2))})'
+    s_sl_regime    = f'−{sl_now:.0f}% ({sl_regime} regime, sd84={"entry "+fn(sd84_entry) if in_pos else fn(cur_sd84)})'
     sl_trigger_px  = max(0.0, entry_mid * (1 + (-sl_now) / 100))
-    s_sl_trigger   = f'${sl_trigger_px:.4f}' if in_pos else '—'
-    s_calc_entry_vf = f'{entry_vf75:.3f}'  if in_pos else f'{cur_vf75:.3f}'
+    s_sl_trigger   = f'${fn(sl_trigger_px)}' if in_pos else '—'
+    s_calc_entry_vf = fn(entry_vf75)        if in_pos else fn(cur_vf75)
 
     # ── Trade history table rows ──────────────────────────────────────────────
     trade_rows_html = ''
@@ -389,7 +395,7 @@ td.green{{color:#3fb950}}td.red{{color:#f85149}}
   <div class="header-right">
     <div>Updated: <strong>{gen_ts}</strong></div>
     <div>Data date: <strong>{cur_date}</strong></div>
-    <div>VF75: <strong>{cur_vf75:.3f}</strong> &nbsp; VIX: <strong>{cur_vix:.2f}</strong></div>
+    <div>VF75: <strong>{fn(cur_vf75)}</strong> &nbsp; VIX: <strong>{cur_vix:.2f}</strong></div>
   </div>
 </header>
 <main>
@@ -409,7 +415,7 @@ td.green{{color:#3fb950}}td.red{{color:#f85149}}
   </div>
   <div class="card c-out">
     <div class="lbl">VF75</div>
-    <div class="val white">{cur_vf75:.3f}</div>
+    <div class="val white">{fn(cur_vf75)}</div>
     <div class="hint">(VX60d+VX90d)/2</div>
   </div>
   <div class="card c-out">
@@ -419,7 +425,7 @@ td.green{{color:#3fb950}}td.red{{color:#f85149}}
   </div>
   <div class="card c-out">
     <div class="lbl">sigma_now</div>
-    <div class="val {'red' if cur_sigma>=1.5 else 'white'}">{cur_sigma:.3f}</div>
+    <div class="val {'red' if cur_sigma>=1.5 else 'white'}">{fn(cur_sigma)}</div>
     <div class="hint">VVIX/100, floor 0.80</div>
   </div>
   <div class="card c-out">
@@ -429,13 +435,13 @@ td.green{{color:#3fb950}}td.red{{color:#f85149}}
   </div>
   <div class="card c-out">
     <div class="lbl">B76 Mid</div>
-    <div class="val white">${cur_b76mid:.4f}</div>
-    <div class="hint">T=75d, σ={cur_sigma:.3f}</div>
+    <div class="val white">${fn(cur_b76mid)}</div>
+    <div class="hint">T=75d, σ={fn(cur_sigma)}</div>
   </div>
   <div class="card c-out">
     <div class="lbl">SL Regime</div>
     <div class="val {'orange' if sl_regime=='volatile' else 'white'}">{sl_regime}</div>
-    <div class="hint">−{sl_level:.0f}%  sd84={cur_sd84:.3f}</div>
+    <div class="hint">−{sl_level:.0f}%  sd84={fn(cur_sd84)}</div>
   </div>
   <div class="card c-out">
     <div class="lbl">Current ROI</div>
@@ -477,13 +483,13 @@ td.green{{color:#3fb950}}td.red{{color:#f85149}}
     <div class="pos-row"><span class="k">Entry VF75</span>
       <span class="v">{s_entry_vf75}</span></div>
     <div class="pos-row"><span class="k">Current VF75</span>
-      <span class="v">{cur_vf75:.3f}</span></div>
+      <span class="v">{fn(cur_vf75)}</span></div>
     <div class="pos-row"><span class="k">Entry sigma</span>
       <span class="v">{s_entry_sigma}</span></div>
     <div class="pos-row"><span class="k">Current sigma</span>
-      <span class="v">{cur_sigma:.4f}</span></div>
+      <span class="v">{fn(cur_sigma)}</span></div>
     <div class="pos-row"><span class="k">B76 mid (now)</span>
-      <span class="v">${cur_b76mid:.4f}</span></div>
+      <span class="v">${fn(cur_b76mid)}</span></div>
     <div class="pos-row"><span class="k">Theta (decay/day)</span>
       <span class="v red">{cur_theta_pct:.2f}%/day</span></div>
     <div class="pos-row"><span class="k">Adaptive SL</span>
@@ -664,6 +670,7 @@ function nextEven(x){{return Math.ceil(x/2)*2;}}
 function bid(m){{return Math.max(0,m-0.01);}}
 function ask_(m){{return m+0.01;}}
 function fmtROI(v){{const s=v>=0?'+':'';return `<span style="color:${{v>=0?'#3fb950':'#f85149'}}">${{s}}${{v.toFixed(1)}}%</span>`;}}
+function fmtN(v,d=3){{return parseFloat(v.toFixed(d)).toString();}}
 
 const R=0.045, TENOR=75;
 const CUR_VF={cur_vf75:.3f}, CUR_SIG={cur_sigma:.3f};
@@ -689,8 +696,8 @@ const exitLx ={js(exit_l_x)},  exitLy ={js(exit_l_y)};
 // ── Price chart ────────────────────────────────────────────────────────────────
 (function(){{
   const hover=dates.map((d,i)=>
-    `${{d}}<br>VF75: ${{vf75arr[i]?.toFixed(3)}}<br>VIX: ${{vixArr[i]?.toFixed(2)}}<br>`+
-    `EMA(3m): ${{ema63arr[i]?.toFixed(3)}}<br>Spike: ${{spikeLvl[i]?.toFixed(3)}}`);
+    `${{d}}<br>VF75: ${{vf75arr[i]!=null?fmtN(vf75arr[i]):'—'}}<br>VIX: ${{vixArr[i]?.toFixed(2)}}<br>`+
+    `EMA(3m): ${{ema63arr[i]!=null?fmtN(ema63arr[i]):'—'}}<br>Spike: ${{spikeLvl[i]!=null?fmtN(spikeLvl[i]):'—'}}`);
   const traces=[
     {{x:dates,y:vixArr,mode:'lines',name:'VIX',
       line:{{color:'rgba(200,200,200,0.28)',width:1.2}},hoverinfo:'skip',showlegend:true}},
@@ -721,7 +728,7 @@ const exitLx ={js(exit_l_x)},  exitLy ={js(exit_l_y)};
     margin:{{t:30,r:20,b:60,l:55}},hovermode:'closest',
     annotations:[{{
       xref:'paper',yref:'paper',x:0.01,y:0.97,xanchor:'left',yanchor:'top',
-      text:`VF75 {cur_vf75:.3f} | VIX {cur_vix:.2f} | EMA {cur_ema63:.3f} | σ {cur_sigma:.3f} | Spike {spike_str}`,
+      text:`VF75 {fn(cur_vf75)} | VIX {cur_vix:.2f} | EMA {fn(cur_ema63)} | σ {fn(cur_sigma)} | Spike {spike_str}`,
       showarrow:false,font:{{size:10,color:'#8b949e'}},
       bgcolor:'rgba(13,17,23,0.7)',bordercolor:'#30363d',borderwidth:1
     }}]
@@ -762,28 +769,28 @@ function updateCalc(){{
   const F  =+document.getElementById('calcVF').value;
   const sig=+document.getElementById('calcSig').value;
   const d  =+document.getElementById('calcDays').value;
-  document.getElementById('calcVFVal').textContent  =F.toFixed(3);
-  document.getElementById('calcSigVal').textContent =sig.toFixed(3);
+  document.getElementById('calcVFVal').textContent  =fmtN(F);
+  document.getElementById('calcSigVal').textContent =fmtN(sig);
   document.getElementById('calcDaysVal').textContent=d;
 
   const eVF=parseFloat(document.getElementById('calcEntryVF').value)||CUR_VF;
   const K  =nextEven(eVF*1.05);
   // Use real market mid paid if in position, else B76 theoretical
   const entryMid = ENTRY_MID_FIXED > 0 ? ENTRY_MID_FIXED : b76(eVF,K,TENOR/365,ENTRY_SIGMA,R);
-  document.getElementById('cEntryPrice').textContent='$'+entryMid.toFixed(4);
+  document.getElementById('cEntryPrice').textContent='$'+fmtN(entryMid);
   document.getElementById('cStrike').textContent=K;
   const entryLabel = ENTRY_MID_FIXED > 0
-    ? '$'+entryMid.toFixed(4)+' (real mid at entry)'
-    : '$'+entryMid.toFixed(4)+' (B76 theoretical, K='+K+')';
+    ? '$'+fmtN(entryMid)+' (real mid at entry)'
+    : '$'+fmtN(entryMid)+' (B76 theoretical, K='+K+')';
   document.getElementById('cEntryOut').textContent=entryLabel;
 
   const T  =Math.max(0,(TENOR-d)/365);
   const mid=b76(F,K,T,sig,R);
   const b  =bid(mid),a=ask_(mid);
   const th =T>1/365?((b76(F,K,T-1/365,sig,R)-mid)/mid*100):0;
-  document.getElementById('cMid').textContent    ='$'+mid.toFixed(4);
-  document.getElementById('cBid').textContent    ='$'+b.toFixed(4);
-  document.getElementById('cAsk').textContent    ='$'+a.toFixed(4);
+  document.getElementById('cMid').textContent    ='$'+fmtN(mid);
+  document.getElementById('cBid').textContent    ='$'+fmtN(b);
+  document.getElementById('cAsk').textContent    ='$'+fmtN(a);
   document.getElementById('cDaysLeft').textContent=Math.max(0,TENOR-d)+' days';
   document.getElementById('cTheta').textContent  =th.toFixed(2)+'%/day';
   document.getElementById('cROI').innerHTML=fmtROI((mid-entryMid)/entryMid*100);
@@ -802,7 +809,7 @@ function updateCalc(){{
   ];
   Plotly.newPlot('calcVFChart',[
     {{x:vr,y:vb,mode:'lines',name:'Mid',line:{{color:'#3fb950',width:2}},
-      hovertemplate:'VF75 %{{x}}<br>Mid $%{{y:.4f}}<br>ROI %{{customdata}}%<extra></extra>',customdata:vROI}},
+      hovertemplate:'VF75 %{{x}}<br>Mid $%{{y:.3g}}<br>ROI %{{customdata}}%<extra></extra>',customdata:vROI}},
     {{x:[10,60],y:[entryMid,entryMid],mode:'lines',name:'Entry mid',
       line:{{color:'#58a6ff',width:1.2,dash:'dot'}},hoverinfo:'skip'}},
   ],{{paper_bgcolor:'#161b22',plot_bgcolor:'#0d1117',font:{{color:'#c9d1d9',size:11}},
@@ -824,7 +831,7 @@ function updateCalc(){{
   }}
   Plotly.newPlot('calcDecayChart',[
     {{x:dx,y:db,mode:'lines',name:'Mid',line:{{color:'#3fb950',width:2}},
-      hovertemplate:'Day %{{x}}<br>Mid $%{{y:.4f}}<br>ROI %{{customdata}}%<extra></extra>',customdata:dROI}},
+      hovertemplate:'Day %{{x}}<br>Mid $%{{y:.3g}}<br>ROI %{{customdata}}%<extra></extra>',customdata:dROI}},
     {{x:[0,TENOR],y:[entryMid,entryMid],mode:'lines',name:'Entry mid',
       line:{{color:'#58a6ff',width:1.2,dash:'dot'}},hoverinfo:'skip'}},
   ],{{paper_bgcolor:'#161b22',plot_bgcolor:'#0d1117',font:{{color:'#c9d1d9',size:11}},
