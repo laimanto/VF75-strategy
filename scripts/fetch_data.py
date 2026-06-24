@@ -268,10 +268,11 @@ def fetch_vix_option(strike: int, target_expiry: str) -> dict | None:
             return None       # no usable price at all
 
         return {
-            'mid':    round(mid, 4),
-            'bid':    round(bid, 4),
-            'ask':    round(ask, 4),
-            'iv':     round(iv, 4),
+            'mid':   round(mid, 4),          # (bid+ask)/2; fallback to last price
+            'last':  round(lp, 4) if lp > 0 else 0.0,  # last traded price from exchange
+            'bid':   round(bid, 4),
+            'ask':   round(ask, 4),
+            'iv':    round(iv, 4),
             'expiry': expiry,
         }
     except Exception as e:
@@ -409,18 +410,20 @@ def main():
 
     if opt:
         opt_mid    = opt['mid']
+        opt_last   = opt['last']
         opt_bid    = opt['bid']
         opt_ask    = opt['ask']
         opt_iv     = opt['iv']
         expiry     = opt['expiry']
         sigma_used = max(opt_iv, SIGMA_DEF)
-        print(f'  mid={opt_mid}  bid={opt_bid}  ask={opt_ask}  iv={opt_iv:.4f}  expiry={expiry}')
+        print(f'  mid={opt_mid}  last={opt_last}  bid={opt_bid}  ask={opt_ask}  iv={opt_iv:.4f}  expiry={expiry}')
     else:
         # Fallback: B76 theoretical price as mid
         dte_now    = (datetime.strptime(target_expiry, '%Y-%m-%d').date() - ref_date).days \
                      if target_expiry != str(ref_date) else TENOR
         T          = max(0, dte_now / 365)
         opt_mid    = round(b76(vf75, strike, T, sigma_now), 4)
+        opt_last   = 0.0
         opt_bid    = opt_mid
         opt_ask    = opt_mid
         sigma_used = sigma_now
@@ -451,6 +454,7 @@ def main():
         'sigma_now':     round(sigma_used, 4),
         'strike':        strike,
         'option_mid':    opt_mid,
+        'option_last':   opt_last,
         'option_bid':    opt_bid,
         'option_ask':    opt_ask,
         'option_expiry': expiry,

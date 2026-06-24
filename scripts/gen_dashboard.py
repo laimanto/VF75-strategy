@@ -122,14 +122,13 @@ def main():
     in_pos       = position.get('in_position', False)
     entry_vf75   = float(position.get('entry_vf75', cur_vf75)) if in_pos else cur_vf75
     entry_sigma  = float(position.get('entry_sigma', cur_sigma))
-    entry_mid    = float(position.get('entry_mid', cur_b76mid)) if in_pos else cur_b76mid
+    entry_mid    = float(position.get('entry_mid', 0)) if in_pos else 0.0  # 0 = not in position; JS falls back to cur mid
     entry_strike = int(position.get('strike', cur_strike))      if in_pos else cur_strike
     entry_date   = position.get('entry_date', '—')
     entry_expiry = position.get('expiry', '—')
     sd84_entry   = float(position.get('sd84_at_entry', cur_sd84))
     sl_entry     = float(position.get('sl_used', sl_level))
     entry_sigma  = entry_sigma if in_pos else cur_sigma  # for ENTRY_SIGMA JS constant
-    entry_mid    = float(position.get('entry_mid', cur_b76mid)) if in_pos else cur_b76mid
 
     days_held    = 0
     cal_days_left= TENOR
@@ -148,6 +147,7 @@ def main():
     # Current option market data — prefer fetched.json (today's real data), fall back to option_price.csv
     cur_bid          = float(fetched.get('option_bid', 0))
     cur_ask          = float(fetched.get('option_ask', 0))
+    cur_last         = float(fetched.get('option_last', 0))   # last traded price; 0 if unavailable
     cur_option_expiry = fetched.get('option_expiry', '—')
     op_rows = list(csv.DictReader(open(DATA_DIR / 'option_price.csv', encoding='utf-8')))
     if op_rows:
@@ -295,6 +295,7 @@ def main():
     s_entry_sigma  = fn(entry_sigma)         if in_pos else '—'
     s_entry_mid    = f'${fn(entry_mid)}'     if in_pos else '—'
     s_cur_mid      = f'${fn(cur_mid_live)}'  if cur_mid_live > 0 else '—'
+    s_last         = f'${fn(cur_last)}'      if cur_last > 0 else '—'
     s_bid          = f'${fn(cur_bid)}'       if cur_bid > 0 else '—'
     s_ask          = f'${fn(cur_ask)}'       if cur_ask > 0 else '—'
     show_expiry    = entry_expiry if (in_pos and entry_expiry != '—') else cur_option_expiry
@@ -466,7 +467,7 @@ td.green{{color:#3fb950}}td.red{{color:#f85149}}
     <div class="hint">next even ≥ VF75×1.05</div>
   </div>
   <div class="card c-out">
-    <div class="lbl">Market Mid</div>
+    <div class="lbl">Mid (bid+ask)/2</div>
     <div class="val white">${fn(cur_mid_live)}</div>
     <div class="hint">B76 theo: ${fn(cur_b76mid)}</div>
   </div>
@@ -535,12 +536,14 @@ td.green{{color:#3fb950}}td.red{{color:#f85149}}
       <span class="v">{entry_strike if in_pos else cur_strike}</span></div>
     <div class="pos-row"><span class="k">Expiry</span>
       <span class="v">{show_expiry}</span></div>
+    <div class="pos-row"><span class="k">Last Price</span>
+      <span class="v green">{s_last}</span></div>
     <div class="pos-row"><span class="k">Bid</span>
       <span class="v">{s_bid}</span></div>
     <div class="pos-row"><span class="k">Ask</span>
       <span class="v">{s_ask}</span></div>
-    <div class="pos-row"><span class="k">Mid (market)</span>
-      <span class="v green">{s_cur_mid}</span></div>
+    <div class="pos-row"><span class="k">Mid (bid+ask)/2</span>
+      <span class="v">{s_cur_mid}</span></div>
     <div class="pos-row"><span class="k">B76 theo</span>
       <span class="v gray">${fn(cur_b76mid)}</span></div>
     <div class="pos-row"><span class="k">Tenor</span>

@@ -82,7 +82,7 @@ td.green{color:#3fb950}td.red{color:#f85149}
     <div class="sub">manual_v33 &nbsp;|&nbsp; B76 pricing &nbsp;|&nbsp; Adaptive SL &nbsp;|&nbsp; CBOE VX futures</div>
   </div>
   <div class="header-right">
-    <div>Updated: <strong>2026-06-23 22:49 ET</strong></div>
+    <div>Updated: <strong>2026-06-23 22:58 ET</strong></div>
     <div>Data date: <strong>2026-06-23</strong></div>
   </div>
 </header>
@@ -122,7 +122,7 @@ td.green{color:#3fb950}td.red{color:#f85149}
     <div class="hint">next even ≥ VF75×1.05</div>
   </div>
   <div class="card c-out">
-    <div class="lbl">Market Mid</div>
+    <div class="lbl">Mid (bid+ask)/2</div>
     <div class="val white">$2.7</div>
     <div class="hint">B76 theo: $3.118</div>
   </div>
@@ -245,12 +245,14 @@ td.green{color:#3fb950}td.red{color:#f85149}
       <span class="v">22</span></div>
     <div class="pos-row"><span class="k">Expiry</span>
       <span class="v">2026-09-16</span></div>
+    <div class="pos-row"><span class="k">Last Price</span>
+      <span class="v green">—</span></div>
     <div class="pos-row"><span class="k">Bid</span>
       <span class="v">$2.3</span></div>
     <div class="pos-row"><span class="k">Ask</span>
       <span class="v">$3.1</span></div>
-    <div class="pos-row"><span class="k">Mid (market)</span>
-      <span class="v green">$2.7</span></div>
+    <div class="pos-row"><span class="k">Mid (bid+ask)/2</span>
+      <span class="v">$2.7</span></div>
     <div class="pos-row"><span class="k">B76 theo</span>
       <span class="v gray">$3.118</span></div>
     <div class="pos-row"><span class="k">Tenor</span>
@@ -434,7 +436,7 @@ const CUR_IV_MID=0.8817;  // market-implied vol from real mid price
 // ENTRY_SIGMA: actual sigma recorded at entry; defaults to VVIX/100 when OUT
 const ENTRY_SIGMA=0.995;
 // ENTRY_MID_FIXED: real market mid paid at entry (0 = not in position)
-const ENTRY_MID_FIXED=3.1177;
+const ENTRY_MID_FIXED=0.0000;
 // CUR_MID_MARKET: today's real market mid from option_price.csv
 const CUR_MID_MARKET=2.7000;
 
