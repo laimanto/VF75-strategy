@@ -258,7 +258,11 @@ def main():
     signal_cls  = ('blue' if in_pos else ('green' if all_entry else 'orange'))
     pos_card_cls= ('c-in' if in_pos else ('c-entry' if all_entry else 'c-out'))
 
-    gen_ts = datetime.now().strftime('%Y-%m-%d %H:%M ET')
+    try:
+        from zoneinfo import ZoneInfo
+        gen_ts = datetime.now(ZoneInfo('America/Toronto')).strftime('%Y-%m-%d %H:%M ET')
+    except Exception:
+        gen_ts = datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')
 
     # ── Pre-compute display strings (avoid conditional exprs inside format specs) ─
     s_entry_vf75   = fn(entry_vf75)          if in_pos else '—'
