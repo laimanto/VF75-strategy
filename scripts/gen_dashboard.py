@@ -438,9 +438,9 @@ td.green{{color:#3fb950}}td.red{{color:#f85149}}
     <div class="hint">next even ≥ VF75×1.05</div>
   </div>
   <div class="card c-out">
-    <div class="lbl">B76 Mid</div>
-    <div class="val white">${fn(cur_b76mid)}</div>
-    <div class="hint">T=75d, σ={fn(cur_sigma)}</div>
+    <div class="lbl">Market Mid</div>
+    <div class="val white">${fn(cur_mid_live)}</div>
+    <div class="hint">B76 theo: ${fn(cur_b76mid)}</div>
   </div>
   <div class="card c-out">
     <div class="lbl">SL Regime</div>
@@ -492,8 +492,10 @@ td.green{{color:#3fb950}}td.red{{color:#f85149}}
       <span class="v">{s_entry_sigma}</span></div>
     <div class="pos-row"><span class="k">Current sigma</span>
       <span class="v">{fn(cur_sigma)}</span></div>
-    <div class="pos-row"><span class="k">B76 mid (now)</span>
-      <span class="v">${fn(cur_b76mid)}</span></div>
+    <div class="pos-row"><span class="k">Market mid (now)</span>
+      <span class="v">${fn(cur_mid_live)}</span></div>
+    <div class="pos-row"><span class="k">B76 theo (now)</span>
+      <span class="v gray">${fn(cur_b76mid)}</span></div>
     <div class="pos-row"><span class="k">Theta (decay/day)</span>
       <span class="v red">{cur_theta_pct:.2f}%/day</span></div>
     <div class="pos-row"><span class="k">Adaptive SL</span>
@@ -680,8 +682,10 @@ const R=0.045, TENOR=75;
 const CUR_VF={cur_vf75:.3f}, CUR_SIG={cur_sigma:.3f};
 // ENTRY_SIGMA: actual sigma recorded at entry; defaults to cur_sigma when OUT
 const ENTRY_SIGMA={entry_sigma:.3f};
-// ENTRY_MID_FIXED: real market mid paid at entry (0 = not in position, use B76 calc instead)
+// ENTRY_MID_FIXED: real market mid paid at entry (0 = not in position)
 const ENTRY_MID_FIXED={entry_mid:.4f};
+// CUR_MID_MARKET: today's real market mid from option_price.csv
+const CUR_MID_MARKET={cur_mid_live:.4f};
 
 // ── Trade chart data ───────────────────────────────────────────────────────────
 const dates     = {dates_js};
@@ -779,12 +783,16 @@ function updateCalc(){{
 
   const eVF=parseFloat(document.getElementById('calcEntryVF').value)||CUR_VF;
   const K  =nextEven(eVF*1.05);
-  // Use real market mid paid if in position, else B76 theoretical
-  const entryMid = ENTRY_MID_FIXED > 0 ? ENTRY_MID_FIXED : b76(eVF,K,TENOR/365,ENTRY_SIGMA,R);
+  // Entry mid: real price paid (in position), today's market mid (out), or B76 fallback
+  const entryMid = ENTRY_MID_FIXED > 0 ? ENTRY_MID_FIXED
+                 : CUR_MID_MARKET   > 0 ? CUR_MID_MARKET
+                 : b76(eVF,K,TENOR/365,ENTRY_SIGMA,R);
   document.getElementById('cEntryPrice').textContent='$'+fmtN(entryMid);
   document.getElementById('cStrike').textContent=K;
   const entryLabel = ENTRY_MID_FIXED > 0
-    ? '$'+fmtN(entryMid)+' (real mid at entry)'
+    ? '$'+fmtN(entryMid)+' (market mid paid at entry)'
+    : CUR_MID_MARKET > 0
+    ? '$'+fmtN(entryMid)+' (today\'s market mid, K='+K+')'
     : '$'+fmtN(entryMid)+' (B76 theoretical, K='+K+')';
   document.getElementById('cEntryOut').textContent=entryLabel;
 
