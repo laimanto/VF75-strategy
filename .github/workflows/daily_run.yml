@@ -2,7 +2,8 @@ name: VF75 Strategy Daily Run
 
 on:
   schedule:
-    - cron: '35 21 * * 1-5'   # 4:35pm EST / 5:35pm EDT (21:35 UTC), weekdays Mon-Fri
+    - cron: '35 20 * * 1-5'   # 4:35pm EDT (Mar–Nov, UTC-4)
+    - cron: '35 21 * * 1-5'   # 4:35pm EST (Nov–Mar, UTC-5)
   workflow_dispatch:           # manual trigger from GitHub UI
 
 permissions:
