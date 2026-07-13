@@ -26,12 +26,12 @@
     },
     "vf75_below_ema63": {
       "met": true,
-      "value": 19.722,
+      "value": 19.556,
       "threshold": "< EMA63 (20.905)"
     },
     "ema63_gap": {
       "met": false,
-      "value": 5.66,
+      "value": 6.45,
       "threshold": "<= 3.5000000000000004%"
     },
     "atr10_filter": {
