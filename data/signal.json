@@ -11,27 +11,27 @@
     },
     "macd_5_13": {
       "met": false,
-      "value": -0.2094,
+      "value": -0.1777,
       "threshold": "> 0"
     },
     "roc_3m": {
       "met": false,
-      "value": -11.04,
+      "value": -9.0,
       "threshold": ">= -8.0%"
     },
     "roc_1m": {
       "met": false,
-      "value": -5.88,
+      "value": -7.03,
       "threshold": ">= -5.0%"
     },
     "vf75_below_ema63": {
       "met": true,
-      "value": 19.556,
-      "threshold": "< EMA63 (20.905)"
+      "value": 19.722,
+      "threshold": "< EMA63 (20.868)"
     },
     "ema63_gap": {
       "met": false,
-      "value": 6.45,
+      "value": 5.49,
       "threshold": "<= 3.5000000000000004%"
     },
     "atr10_filter": {
@@ -41,7 +41,7 @@
     },
     "vix_spread": {
       "met": true,
-      "value": -4.69,
+      "value": -2.56,
       "threshold": "< -1.0"
     },
     "sl_cooldown": {
