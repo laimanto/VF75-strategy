@@ -1,4 +1,14 @@
 {
-  "in_position": false,
+  "in_position": true,
+  "trade_id": 1,
+  "entry_date": "2026-07-21",
+  "entry_vf75": 20.113,
+  "entry_sigma": 1.252,
+  "sd84_at_entry": 1.4655,
+  "sl_used": 38.0,
+  "strike": 22,
+  "entry_mid": 2.74,
+  "expiry": "2026-10-21",
+  "tenor": 75,
   "sl_cooldown_until": null
 }
