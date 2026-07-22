@@ -308,7 +308,24 @@ def main():
     s_calc_entry_vf = fn(entry_vf75)        if in_pos else fn(cur_vf75)
 
     # ── Trade history table rows ──────────────────────────────────────────────
+    # Includes the currently open trade (live, unrealized) plus all closed trades.
     trade_rows_html = ''
+    if in_pos:
+        trade_rows_html += f'''
+  <tr>
+    <td>{position.get("trade_id","")}</td>
+    <td>{entry_date}</td>
+    <td>{fn(entry_vf75)}</td>
+    <td>{entry_strike}</td>
+    <td>{fn(entry_mid)}</td>
+    <td>—</td>
+    <td>—</td>
+    <td>{days_held}</td>
+    <td class="blue">{fmt_roi(cur_roi)}</td>
+    <td class="blue">OPEN</td>
+    <td></td>
+  </tr>'''
+
     if closed:
         for r in reversed(closed):
             roi   = float(r.get('roi_pct', 0))
@@ -327,10 +344,11 @@ def main():
     <td>{r["exit_reason"]}</td>
     <td>{r.get("notes","")}</td>
   </tr>'''
-    else:
+
+    if not trade_rows_html:
         trade_rows_html = '''
   <tr><td colspan="11" style="text-align:center;color:#8b949e;padding:20px;font-style:italic">
-    No closed trades yet.
+    No trades yet.
   </td></tr>'''
 
     # ── Cumulative and bar ROI data for charts ────────────────────────────────
