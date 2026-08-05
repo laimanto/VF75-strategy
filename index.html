@@ -100,7 +100,7 @@ td.green{color:#3fb950}td.red{color:#f85149}
     <div class="sub">manual_v33 &nbsp;|&nbsp; B76 pricing &nbsp;|&nbsp; Adaptive SL &nbsp;|&nbsp; CBOE VX futures</div>
   </div>
   <div class="header-right">
-    <div>Updated: <strong>2026-08-05 14:57 ET</strong></div>
+    <div>Updated: <strong>2026-08-05 15:01 ET</strong></div>
     <div>Data date: <strong>2026-08-04</strong></div>
   </div>
 </header>
@@ -123,13 +123,13 @@ td.green{color:#3fb950}td.red{color:#f85149}
   <div class="pair-row">
     <span class="rk">Current<em>2026-08-04</em></span>
     <span class="rv white">20.047</span>
-    <span class="rv white">$2.345<em>B76 theo $2.577</em></span>
+    <span class="rv white">$2.125<em>B76 theo $2.577</em></span>
     <span class="rv white">16.50</span>
   </div>
   <div class="pair-row pair-chg">
     <span class="rk">Change</span>
     <span class="rv red">-0.066 (-0.3%)</span>
-    <span class="rv red">-0.40 (-14.4%)</span>
+    <span class="rv red">-0.62 (-22.4%)</span>
     <span class="rv red">-0.55</span>
   </div>
 </div>
@@ -163,7 +163,7 @@ td.green{color:#3fb950}td.red{color:#f85149}
   </div>
   <div class="card c-out">
     <div class="lbl">Current ROI</div>
-    <div class="val red">-14.4%</div>
+    <div class="val red">-22.4%</div>
     <div class="hint">mid vs entry mid</div>
   </div>
   <div class="card c-out">
@@ -187,13 +187,13 @@ td.green{color:#3fb950}td.red{color:#f85149}
   </div>
   <div class="card c-out">
     <div class="lbl">Market IV</div>
-    <div class="val white">0.861</div>
+    <div class="val white">0.8</div>
     <div class="hint">back-solved from mid</div>
   </div>
   <div class="card c-out">
     <div class="lbl">Bid / Ask</div>
-    <div class="val white" style="font-size:15px">$2.05 / $2.64</div>
-    <div class="hint">last —</div>
+    <div class="val white" style="font-size:15px">$2.1 / $2.15</div>
+    <div class="hint">last $2.11</div>
   </div>
   <div class="card c-out">
     <div class="lbl">Expiry</div>
@@ -207,7 +207,7 @@ td.green{color:#3fb950}td.red{color:#f85149}
   </div>
   <div class="card c-out">
     <div class="lbl">Theta</div>
-    <div class="val red" style="font-size:15px">-0.87%/d</div>
+    <div class="val red" style="font-size:15px">-0.89%/d</div>
     <div class="hint">decay at market IV</div>
   </div>
 </div>
@@ -310,7 +310,7 @@ td.green{color:#3fb950}td.red{color:#f85149}
     <div class="cond-row">
       <span class="cond-icon cond-idle">·</span>
       <span class="cond-name">Stop loss</span>
-      <span class="cond-val">-14.4%</span>
+      <span class="cond-val">-22.4%</span>
       <span class="cond-thresh">≤ −38%</span>
       <span class="cond-desc">ROI on mid; volatile regime locked at entry</span>
     </div>
@@ -352,13 +352,13 @@ td.green{color:#3fb950}td.red{color:#f85149}
     <div class="pos-row"><span class="k">VVIX/100 (proxy σ)</span>
       <span class="v gray">0.926</span></div>
     <div class="pos-row"><span class="k">Market IV (from mid)</span>
-      <span class="v">0.861 (86.1%)</span></div>
+      <span class="v">0.7996 (79.96%)</span></div>
     <div class="pos-row"><span class="k">Theta (decay/day)</span>
-      <span class="v red">-0.87%/day</span></div>
+      <span class="v red">-0.89%/day</span></div>
     <div class="pos-row"><span class="k">Adaptive SL</span>
       <span class="v">−38% (volatile regime, sd84=entry 1.466)</span></div>
     <div class="pos-row"><span class="k">Current ROI</span>
-      <span class="v red">-14.4%</span></div>
+      <span class="v red">-22.4%</span></div>
   </div>
   <div class="pos-group">
     <h3>Option  (in position)</h3>
@@ -367,13 +367,13 @@ td.green{color:#3fb950}td.red{color:#f85149}
     <div class="pos-row"><span class="k">Expiry</span>
       <span class="v">2026-10-21</span></div>
     <div class="pos-row"><span class="k">Last Price</span>
-      <span class="v green">—</span></div>
+      <span class="v green">$2.11</span></div>
     <div class="pos-row"><span class="k">Bid</span>
-      <span class="v">$2.05</span></div>
+      <span class="v">$2.1</span></div>
     <div class="pos-row"><span class="k">Ask</span>
-      <span class="v">$2.64</span></div>
+      <span class="v">$2.15</span></div>
     <div class="pos-row"><span class="k">Mid (bid+ask)/2</span>
-      <span class="v">$2.345</span></div>
+      <span class="v">$2.125</span></div>
     <div class="pos-row"><span class="k">B76 theo</span>
       <span class="v gray">$2.577</span></div>
     <div class="pos-row"><span class="k">Tenor</span>
@@ -429,8 +429,8 @@ td.green{color:#3fb950}td.red{color:#f85149}
         <input type="range" id="calcVF" min="10" max="60" step="0.01" value="20.047" oninput="updateCalc()">
       </div>
       <div class="slider-group">
-        <label>Implied Vol σ (market IV) <span id="calcSigVal">0.861</span></label>
-        <input type="range" id="calcSig" min="0.50" max="3.00" step="0.001" value="0.861" oninput="updateCalc()">
+        <label>Implied Vol σ (market IV) <span id="calcSigVal">0.800</span></label>
+        <input type="range" id="calcSig" min="0.50" max="3.00" step="0.001" value="0.800" oninput="updateCalc()">
       </div>
       <div class="slider-group">
         <label>Days Held <span id="calcDaysVal">14</span></label>
@@ -531,7 +531,7 @@ td.green{color:#3fb950}td.red{color:#f85149}
     <td>—</td>
     <td>—</td>
     <td>14</td>
-    <td class="blue">-14.4%</td>
+    <td class="blue">-22.4%</td>
     <td class="blue">OPEN</td>
     <td></td>
   </tr></tbody>
@@ -563,13 +563,13 @@ function fmtN(v,d=3){return parseFloat(v.toFixed(d)).toString();}
 const R=0.045, TENOR=75;
 const CUR_VF=20.047;
 const VVIX_SIG=0.926;      // VVIX/100 — used for strategy signal conditions
-const CUR_IV_MID=0.8610;  // market-implied vol from real mid price
+const CUR_IV_MID=0.7996;  // market-implied vol from real mid price
 // ENTRY_SIGMA: actual sigma recorded at entry; defaults to VVIX/100 when OUT
 const ENTRY_SIGMA=1.252;
 // ENTRY_MID_FIXED: real market mid paid at entry (0 = not in position)
 const ENTRY_MID_FIXED=2.7400;
 // CUR_MID_MARKET: today's real market mid from option_price.csv
-const CUR_MID_MARKET=2.3450;
+const CUR_MID_MARKET=2.1250;
 
 // ── Trade chart data ───────────────────────────────────────────────────────────
 const dates     = ["2025-01-02", "2025-01-03", "2025-01-06", "2025-01-07", "2025-01-08", "2025-01-09", "2025-01-10", "2025-01-13", "2025-01-14", "2025-01-15", "2025-01-16", "2025-01-17", "2025-01-21", "2025-01-22", "2025-01-23", "2025-01-24", "2025-01-27", "2025-01-28", "2025-01-29", "2025-01-30", "2025-01-31", "2025-02-03", "2025-02-04", "2025-02-05", "2025-02-06", "2025-02-07", "2025-02-10", "2025-02-11", "2025-02-12", "2025-02-13", "2025-02-14", "2025-02-18", "2025-02-19", "2025-02-20", "2025-02-21", "2025-02-24", "2025-02-25", "2025-02-26", "2025-02-27", "2025-02-28", "2025-03-03", "2025-03-04", "2025-03-05", "2025-03-06", "2025-03-07", "2025-03-10", "2025-03-11", "2025-03-12", "2025-03-13", "2025-03-14", "2025-03-17", "2025-03-18", "2025-03-19", "2025-03-20", "2025-03-21", "2025-03-24", "2025-03-25", "2025-03-26", "2025-03-27", "2025-03-28", "2025-03-31", "2025-04-01", "2025-04-02", "2025-04-03", "2025-04-04", "2025-04-07", "2025-04-08", "2025-04-09", "2025-04-10", "2025-04-11", "2025-04-14", "2025-04-15", "2025-04-16", "2025-04-17", "2025-04-21", "2025-04-22", "2025-04-23", "2025-04-24", "2025-04-25", "2025-04-28", "2025-04-29", "2025-04-30", "2025-05-01", "2025-05-02", "2025-05-05", "2025-05-06", "2025-05-07", "2025-05-08", "2025-05-09", "2025-05-12", "2025-05-13", "2025-05-14", "2025-05-15", "2025-05-16", "2025-05-19", "2025-05-20", "2025-05-21", "2025-05-22", "2025-05-23", "2025-05-27", "2025-05-28", "2025-05-29", "2025-05-30", "2025-06-02", "2025-06-03", "2025-06-04", "2025-06-05", "2025-06-06", "2025-06-09", "2025-06-10", "2025-06-11", "2025-06-12", "2025-06-13", "2025-06-16", "2025-06-17", "2025-06-18", "2025-06-20", "2025-06-23", "2025-06-24", "2025-06-25", "2025-06-26", "2025-06-27", "2025-06-30", "2025-07-01", "2025-07-02", "2025-07-03", "2025-07-07", "2025-07-08", "2025-07-09", "2025-07-10", "2025-07-11", "2025-07-14", "2025-07-15", "2025-07-16", "2025-07-17", "2025-07-18", "2025-07-21", "2025-07-22", "2025-07-23", "2025-07-24", "2025-07-25", "2025-07-28", "2025-07-29", "2025-07-30", "2025-07-31", "2025-08-01", "2025-08-04", "2025-08-05", "2025-08-06", "2025-08-07", "2025-08-08", "2025-08-11", "2025-08-12", "2025-08-13", "2025-08-14", "2025-08-15", "2025-08-18", "2025-08-19", "2025-08-20", "2025-08-21", "2025-08-22", "2025-08-25", "2025-08-26", "2025-08-27", "2025-08-28", "2025-08-29", "2025-09-02", "2025-09-03", "2025-09-04", "2025-09-05", "2025-09-08", "2025-09-09", "2025-09-10", "2025-09-11", "2025-09-12", "2025-09-15", "2025-09-16", "2025-09-17", "2025-09-18", "2025-09-19", "2025-09-22", "2025-09-23", "2025-09-24", "2025-09-25", "2025-09-26", "2025-09-29", "2025-09-30", "2025-10-01", "2025-10-02", "2025-10-03", "2025-10-06", "2025-10-07", "2025-10-08", "2025-10-09", "2025-10-10", "2025-10-13", "2025-10-14", "2025-10-15", "2025-10-16", "2025-10-17", "2025-10-20", "2025-10-21", "2025-10-22", "2025-10-23", "2025-10-24", "2025-10-27", "2025-10-28", "2025-10-29", "2025-10-30", "2025-10-31", "2025-11-03", "2025-11-04", "2025-11-05", "2025-11-06", "2025-11-07", "2025-11-10", "2025-11-11", "2025-11-12", "2025-11-13", "2025-11-14", "2025-11-17", "2025-11-18", "2025-11-19", "2025-11-20", "2025-11-21", "2025-11-24", "2025-11-25", "2025-11-26", "2025-11-28", "2025-12-01", "2025-12-02", "2025-12-03", "2025-12-04", "2025-12-05", "2025-12-08", "2025-12-09", "2025-12-10", "2025-12-11", "2025-12-12", "2025-12-15", "2025-12-16", "2025-12-17", "2025-12-18", "2025-12-19", "2025-12-22", "2025-12-23", "2025-12-24", "2025-12-26", "2025-12-29", "2025-12-30", "2025-12-31", "2026-01-02", "2026-01-05", "2026-01-06", "2026-01-07", "2026-01-08", "2026-01-09", "2026-01-12", "2026-01-13", "2026-01-14", "2026-01-15", "2026-01-16", "2026-01-20", "2026-01-21", "2026-01-22", "2026-01-23", "2026-01-26", "2026-01-27", "2026-01-28", "2026-01-29", "2026-01-30", "2026-02-02", "2026-02-03", "2026-02-04", "2026-02-05", "2026-02-06", "2026-02-09", "2026-02-10", "2026-02-11", "2026-02-12", "2026-02-13", "2026-02-17", "2026-02-18", "2026-02-19", "2026-02-20", "2026-02-23", "2026-02-24", "2026-02-25", "2026-02-26", "2026-02-27", "2026-03-02", "2026-03-03", "2026-03-04", "2026-03-05", "2026-03-06", "2026-03-09", "2026-03-10", "2026-03-11", "2026-03-12", "2026-03-13", "2026-03-16", "2026-03-17", "2026-03-18", "2026-03-19", "2026-03-20", "2026-03-23", "2026-03-24", "2026-03-25", "2026-03-26", "2026-03-27", "2026-03-30", "2026-03-31", "2026-04-01", "2026-04-02", "2026-04-06", "2026-04-07", "2026-04-08", "2026-04-09", "2026-04-10", "2026-04-13", "2026-04-14", "2026-04-15", "2026-04-16", "2026-04-17", "2026-04-20", "2026-04-21", "2026-04-22", "2026-04-23", "2026-04-24", "2026-04-27", "2026-04-28", "2026-04-29", "2026-04-30", "2026-05-01", "2026-05-04", "2026-05-05", "2026-05-06", "2026-05-07", "2026-05-08", "2026-05-11", "2026-05-12", "2026-05-13", "2026-05-14", "2026-05-15", "2026-05-18", "2026-05-19", "2026-05-20", "2026-05-21", "2026-05-22", "2026-05-26", "2026-05-27", "2026-05-28", "2026-05-29", "2026-06-01", "2026-06-02", "2026-06-03", "2026-06-04", "2026-06-05", "2026-06-08", "2026-06-09", "2026-06-10", "2026-06-11", "2026-06-12", "2026-06-15", "2026-06-16", "2026-06-17", "2026-06-23", "2026-06-24", "2026-06-25", "2026-06-26", "2026-06-29", "2026-06-30", "2026-07-01", "2026-07-02", "2026-07-03", "2026-07-06", "2026-07-07", "2026-07-08", "2026-07-09", "2026-07-10", "2026-07-13", "2026-07-14", "2026-07-15", "2026-07-16", "2026-07-17", "2026-07-20", "2026-07-21", "2026-07-22", "2026-07-23", "2026-07-24", "2026-07-27", "2026-07-28", "2026-07-29", "2026-07-30", "2026-07-31", "2026-08-03", "2026-08-04"];
@@ -752,7 +752,7 @@ function updateCalc(){
 // Init calculator
 document.getElementById('calcEntryVF').value=20.113;
 document.getElementById('calcVF').value      =20.047;
-document.getElementById('calcSig').value     =0.8610;
+document.getElementById('calcSig').value     =0.7996;
 updateCalc();
 </script>
 </body>
