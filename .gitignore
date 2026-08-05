@@ -5,3 +5,4 @@ scripts/__pycache__/
 *.pyc
 *.pyo
 .DS_Store
+index_mock.html

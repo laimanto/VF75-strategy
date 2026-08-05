@@ -15,11 +15,24 @@ header{background:#161b22;border-bottom:1px solid #30363d;padding:14px 24px;disp
 .header-right strong{color:#c9d1d9}
 main{padding:18px 24px;max-width:1440px;margin:0 auto}
 .sec{font-size:11px;font-weight:700;color:#8b949e;text-transform:uppercase;letter-spacing:.9px;margin:18px 0 10px;padding-bottom:5px;border-bottom:1px solid #21262d}
-.status-row{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px}
-.card{background:#161b22;border:1px solid #30363d;border-radius:8px;padding:13px 15px}
-.card .lbl{font-size:11px;color:#8b949e;text-transform:uppercase;letter-spacing:.7px;margin-bottom:5px}
-.card .val{font-size:22px;font-weight:700}
-.card .hint{font-size:11px;color:#8b949e;margin-top:4px}
+.status-row{display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:8px}
+.card{background:#161b22;border:1px solid #30363d;border-radius:6px;padding:8px 10px}
+.card .lbl{font-size:10px;color:#8b949e;text-transform:uppercase;letter-spacing:.6px;margin-bottom:3px}
+.card .val{font-size:17px;font-weight:700;line-height:1.2}
+.card .hint{font-size:10px;color:#8b949e;margin-top:2px}
+.sub-sec{font-size:10px;font-weight:700;color:#6e7681;text-transform:uppercase;letter-spacing:.8px;margin:12px 0 6px}
+.pair-tbl{background:#161b22;border:1px solid #30363d;border-radius:6px;padding:0 12px;width:fit-content;max-width:100%}
+.pair-head,.pair-row{display:grid;grid-template-columns:118px repeat(3,124px);gap:8px;align-items:baseline}
+.pair-head{padding:7px 2px 5px;border-bottom:1px solid #21262d}
+.pair-head span{font-size:10px;color:#58a6ff;text-transform:uppercase;letter-spacing:.6px;font-weight:700}
+.pair-row{padding:6px 2px;border-bottom:1px solid #0d1117}
+.pair-row:last-child{border-bottom:none}
+.pair-row .rk{font-size:11px;color:#8b949e;font-weight:600}
+.pair-row .rk em{display:block;font-size:9px;color:#6e7681;font-style:normal;font-weight:400}
+.pair-row .rv{font-size:17px;font-weight:700;color:#e6edf3;line-height:1.25}
+.pair-row .rv em{display:block;font-size:10px;color:#8b949e;font-style:normal;font-weight:400}
+.pair-chg .rv{font-size:13px;font-weight:600}
+.pair-entry{background:rgba(88,166,255,0.04)}
 .c-out{border-color:#30363d}.c-wait{border-color:#9e6a03}
 .c-entry{border-color:#238636}.c-in{border-color:#1f6feb}
 .green{color:#3fb950}.red{color:#f85149}.blue{color:#58a6ff}
@@ -30,17 +43,22 @@ main{padding:18px 24px;max-width:1440px;margin:0 auto}
 .alert-in{background:#0a1628;border-color:#1f6feb;color:#58a6ff}
 .chart-box{background:#161b22;border:1px solid #30363d;border-radius:8px;padding:16px}
 .chart-row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
-.cond-panel{background:#161b22;border:1px solid #30363d;border-radius:8px;padding:14px 16px}
-.cond-header{display:grid;grid-template-columns:28px 160px 120px 90px 1fr;gap:8px;padding:0 4px 8px;border-bottom:1px solid #21262d;margin-bottom:4px}
-.cond-header span{font-size:10px;color:#58a6ff;text-transform:uppercase;letter-spacing:.7px;font-weight:700}
-.cond-row{display:grid;grid-template-columns:28px 160px 120px 90px 1fr;gap:8px;padding:5px 4px;border-bottom:1px solid #0d1117;align-items:center}
+.cond-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:start}
+.cond-panel{background:#161b22;border:1px solid #30363d;border-radius:8px;padding:10px 12px}
+.cond-title{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px}
+.cond-title h3{font-size:11px;color:#58a6ff;text-transform:uppercase;letter-spacing:.8px}
+.cond-title .rule{font-size:10px;color:#8b949e;font-style:italic}
+.cond-header{display:grid;grid-template-columns:18px 96px 88px 96px 1fr;gap:6px;padding:0 3px 6px;border-bottom:1px solid #21262d;margin-bottom:3px}
+.cond-header span{font-size:9px;color:#6e7681;text-transform:uppercase;letter-spacing:.6px;font-weight:700}
+.cond-row{display:grid;grid-template-columns:18px 96px 88px 96px 1fr;gap:6px;padding:4px 3px;border-bottom:1px solid #0d1117;align-items:center}
 .cond-row:last-child{border-bottom:none}
-.cond-icon{font-size:14px;font-weight:700;text-align:center}
+.cond-icon{font-size:12px;font-weight:700;text-align:center}
 .cond-met{color:#3fb950}.cond-not{color:#f85149}
-.cond-name{font-size:12px;font-weight:600;color:#e6edf3}
-.cond-val{font-size:12px;color:#58a6ff;font-family:monospace}
-.cond-thresh{font-size:11px;color:#8b949e}
-.cond-desc{font-size:11px;color:#8b949e;font-style:italic}
+.cond-fire{color:#f85149}.cond-idle{color:#484f58}
+.cond-name{font-size:11px;font-weight:600;color:#e6edf3}
+.cond-val{font-size:11px;color:#58a6ff;font-family:monospace}
+.cond-thresh{font-size:10px;color:#8b949e;font-family:monospace}
+.cond-desc{font-size:10px;color:#8b949e;font-style:italic}
 .pos-groups{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
 .pos-group{background:#161b22;border:1px solid #30363d;border-radius:8px;padding:14px 16px}
 .pos-group h3{font-size:11px;color:#58a6ff;text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px;border-bottom:1px solid #21262d;padding-bottom:6px}
@@ -82,64 +100,115 @@ td.green{color:#3fb950}td.red{color:#f85149}
     <div class="sub">manual_v33 &nbsp;|&nbsp; B76 pricing &nbsp;|&nbsp; Adaptive SL &nbsp;|&nbsp; CBOE VX futures</div>
   </div>
   <div class="header-right">
-    <div>Updated: <strong>2026-08-04 18:39 ET</strong></div>
+    <div>Updated: <strong>2026-08-05 14:57 ET</strong></div>
     <div>Data date: <strong>2026-08-04</strong></div>
   </div>
 </header>
 <main>
 
-<!-- ═══ STATUS CARDS ════════════════════════════════════════════════════════ -->
+<!-- ═══ SUMMARY ═════════════════════════════════════════════════════════════ -->
 <div class="sec">Market Snapshot &amp; Position Status</div>
+
+<div class="sub-sec">Entry vs Current</div>
+<div class="pair-tbl">
+  <div class="pair-head">
+    <span></span><span>VF75</span><span>B76 / Option Mid</span><span>VIX Spot</span>
+  </div>
+  <div class="pair-row pair-entry">
+    <span class="rk">Entry<em>2026-07-21</em></span>
+    <span class="rv blue">20.113</span>
+    <span class="rv blue">$2.74<em>B76 theo $4.254</em></span>
+    <span class="rv blue">17.05</span>
+  </div>
+  <div class="pair-row">
+    <span class="rk">Current<em>2026-08-04</em></span>
+    <span class="rv white">20.047</span>
+    <span class="rv white">$2.345<em>B76 theo $2.577</em></span>
+    <span class="rv white">16.50</span>
+  </div>
+  <div class="pair-row pair-chg">
+    <span class="rk">Change</span>
+    <span class="rv red">-0.066 (-0.3%)</span>
+    <span class="rv red">-0.40 (-14.4%)</span>
+    <span class="rv red">-0.55</span>
+  </div>
+</div>
+
+<div class="sub-sec">Trade Condition</div>
 <div class="status-row">
   <div class="card c-in">
     <div class="lbl">Position</div>
     <div class="val blue">IN</div>
-    <div class="hint">Entry #1</div>
+    <div class="hint">Trade #1 · 14d held</div>
   </div>
   <div class="card c-out">
     <div class="lbl">Entry Signal</div>
-    <div class="val orange">8/8</div>
-    <div class="hint">conditions met</div>
-  </div>
-  <div class="card c-out">
-    <div class="lbl">VF75</div>
-    <div class="val white">20.047</div>
-    <div class="hint">(VX60d+VX90d)/2</div>
-  </div>
-  <div class="card c-out">
-    <div class="lbl">VIX Spot</div>
-    <div class="val white">16.50</div>
-    <div class="hint">CBOE VIX index</div>
-  </div>
-  <div class="card c-out">
-    <div class="lbl">sigma_now</div>
-    <div class="val white">0.926</div>
-    <div class="hint">VVIX/100, floor 0.80</div>
-  </div>
-  <div class="card c-out">
-    <div class="lbl">Strike K</div>
-    <div class="val white">22</div>
-    <div class="hint">next even ≥ VF75×1.05</div>
-  </div>
-  <div class="card c-out">
-    <div class="lbl">Mid (bid+ask)/2</div>
-    <div class="val white">$2.345</div>
-    <div class="hint">B76 theo: $2.577</div>
+    <div class="val gray">8/8</div>
+    <div class="hint">n/a — already in position</div>
   </div>
   <div class="card c-out">
     <div class="lbl">SL Regime</div>
-    <div class="val white">calm</div>
-    <div class="hint">−35%  sd84=0.923</div>
+    <div class="val orange">volatile</div>
+    <div class="hint">−38% · sd84 1.466 @entry</div>
+  </div>
+  <div class="card c-out">
+    <div class="lbl">SL Trigger</div>
+    <div class="val red">$1.699</div>
+    <div class="hint">stop-out mid price</div>
+  </div>
+  <div class="card c-out">
+    <div class="lbl">Spike TP</div>
+    <div class="val orange">22.811</div>
+    <div class="hint">μ84 + 2·sd84 (VF75)</div>
   </div>
   <div class="card c-out">
     <div class="lbl">Current ROI</div>
     <div class="val red">-14.4%</div>
-    <div class="hint">vs entry B76</div>
+    <div class="hint">mid vs entry mid</div>
   </div>
   <div class="card c-out">
     <div class="lbl">Total ROI</div>
     <div class="val green">—</div>
-    <div class="hint">additive, 0 closed trades</div>
+    <div class="hint">additive, 0 closed</div>
+  </div>
+</div>
+
+<div class="sub-sec">Option</div>
+<div class="status-row">
+  <div class="card c-out">
+    <div class="lbl">Strike K</div>
+    <div class="val white">22</div>
+    <div class="hint">entry K, VF75 20.113×1.05</div>
+  </div>
+  <div class="card c-out">
+    <div class="lbl">Sigma σ</div>
+    <div class="val white">0.926</div>
+    <div class="hint">entry σ 1.252</div>
+  </div>
+  <div class="card c-out">
+    <div class="lbl">Market IV</div>
+    <div class="val white">0.861</div>
+    <div class="hint">back-solved from mid</div>
+  </div>
+  <div class="card c-out">
+    <div class="lbl">Bid / Ask</div>
+    <div class="val white" style="font-size:15px">$2.05 / $2.64</div>
+    <div class="hint">last —</div>
+  </div>
+  <div class="card c-out">
+    <div class="lbl">Expiry</div>
+    <div class="val white" style="font-size:14px">2026-10-21</div>
+    <div class="hint">tenor 75d</div>
+  </div>
+  <div class="card c-out">
+    <div class="lbl">Days Held</div>
+    <div class="val white">14</div>
+    <div class="hint">61 left · HD 2026-10-04</div>
+  </div>
+  <div class="card c-out">
+    <div class="lbl">Theta</div>
+    <div class="val red" style="font-size:15px">-0.87%/d</div>
+    <div class="hint">decay at market IV</div>
   </div>
 </div>
 
@@ -151,14 +220,19 @@ td.green{color:#3fb950}td.red{color:#f85149}
   <div id="priceChart" style="height:440px"></div>
 </div>
 
-<!-- ═══ ENTRY CONDITIONS ════════════════════════════════════════════════════ -->
-<div class="sec">Entry Conditions (today)</div>
-<div class="cond-panel">
-  <div class="cond-header">
-    <span></span><span>Condition</span><span>Today's Value</span>
-    <span>Threshold</span><span>Purpose</span>
-  </div>
-  
+<!-- ═══ ENTRY / EXIT CONDITIONS ═════════════════════════════════════════════ -->
+<div class="sec">Entry &amp; Exit Conditions (today)</div>
+<div class="cond-grid">
+  <div class="cond-panel">
+    <div class="cond-title">
+      <h3>Entry — 8/8 met</h3>
+      <span class="rule">triggers only when <b>ALL 8</b> are met</span>
+    </div>
+    <div class="cond-header">
+      <span></span><span>Condition</span><span>Today</span>
+      <span>Threshold</span><span>Purpose</span>
+    </div>
+    
     <div class="cond-row">
       <span class="cond-icon cond-met">✓</span>
       <span class="cond-name">pct_rank(84d)</span>
@@ -215,6 +289,53 @@ td.green{color:#3fb950}td.red{color:#f85149}
       <span class="cond-thresh">< -1.0</span>
       <span class="cond-desc">Normal contango (VF75>VIX)</span>
     </div>
+  </div>
+  <div class="cond-panel">
+    <div class="cond-title">
+      <h3>Exit — <span class="green">none triggered — HOLD</span></h3>
+      <span class="rule">triggers on <b>ANY ONE</b> condition</span>
+    </div>
+    <div class="cond-header">
+      <span></span><span>Condition</span><span>Today</span>
+      <span>Threshold</span><span>Meaning</span>
+    </div>
+    
+    <div class="cond-row">
+      <span class="cond-icon cond-idle">·</span>
+      <span class="cond-name">Spike TP</span>
+      <span class="cond-val">20.047</span>
+      <span class="cond-thresh">≥ 22.811</span>
+      <span class="cond-desc">VF75 spikes to μ84+2·sd84 — take profit</span>
+    </div>
+    <div class="cond-row">
+      <span class="cond-icon cond-idle">·</span>
+      <span class="cond-name">Stop loss</span>
+      <span class="cond-val">-14.4%</span>
+      <span class="cond-thresh">≤ −38%</span>
+      <span class="cond-desc">ROI on mid; volatile regime locked at entry</span>
+    </div>
+    <div class="cond-row">
+      <span class="cond-icon cond-idle">·</span>
+      <span class="cond-name">MACD decay</span>
+      <span class="cond-val">0.049 · 10TD</span>
+      <span class="cond-thresh">&lt; 0 &amp; VF75&lt;entry</span>
+      <span class="cond-desc">Momentum faded (VF75 below entry); needs ≥20 TD</span>
+    </div>
+    <div class="cond-row">
+      <span class="cond-icon cond-idle">·</span>
+      <span class="cond-name">Vol exit</span>
+      <span class="cond-val">0.926</span>
+      <span class="cond-thresh">≥ 1.5</span>
+      <span class="cond-desc">VVIX/100 blow-off; needs ≥20 TD</span>
+    </div>
+    <div class="cond-row">
+      <span class="cond-icon cond-idle">·</span>
+      <span class="cond-name">Hard deadline</span>
+      <span class="cond-val">14d</span>
+      <span class="cond-thresh">≥ 75d</span>
+      <span class="cond-desc">Calendar stop — 2026-10-04</span>
+    </div>
+  </div>
 </div>
 
 <!-- ═══ POSITION DETAIL ══════════════════════════════════════════════════════ -->
@@ -235,7 +356,7 @@ td.green{color:#3fb950}td.red{color:#f85149}
     <div class="pos-row"><span class="k">Theta (decay/day)</span>
       <span class="v red">-0.87%/day</span></div>
     <div class="pos-row"><span class="k">Adaptive SL</span>
-      <span class="v">−38% (calm regime, sd84=entry 1.466)</span></div>
+      <span class="v">−38% (volatile regime, sd84=entry 1.466)</span></div>
     <div class="pos-row"><span class="k">Current ROI</span>
       <span class="v red">-14.4%</span></div>
   </div>
@@ -246,7 +367,7 @@ td.green{color:#3fb950}td.red{color:#f85149}
     <div class="pos-row"><span class="k">Expiry</span>
       <span class="v">2026-10-21</span></div>
     <div class="pos-row"><span class="k">Last Price</span>
-      <span class="v green">$2.3</span></div>
+      <span class="v green">—</span></div>
     <div class="pos-row"><span class="k">Bid</span>
       <span class="v">$2.05</span></div>
     <div class="pos-row"><span class="k">Ask</span>

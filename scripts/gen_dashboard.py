@@ -71,7 +71,7 @@ def fn(v, d=3):
     return s.rstrip('0').rstrip('.')
 
 
-def main():
+def main(out_name='index.html'):
     today_str = str(date.today())
 
     # ── Load data files ───────────────────────────────────────────────────────
@@ -128,6 +128,7 @@ def main():
     entry_expiry = position.get('expiry', '—')
     sd84_entry   = float(position.get('sd84_at_entry', cur_sd84))
     sl_entry     = float(position.get('sl_used', sl_level))
+    sl_now       = sl_entry if in_pos else sl_level   # effective SL % (locked at entry)
     entry_sigma  = entry_sigma if in_pos else cur_sigma  # for ENTRY_SIGMA JS constant
 
     days_held    = 0
@@ -153,6 +154,11 @@ def main():
     if op_rows:
         last_op      = op_rows[-1]
         cur_mid_live = float(last_op.get('option_mid', cur_b76mid))
+        # fetched.json is gitignored, so locally it can lag option_price.csv —
+        # only trust its bid/ask when it was fetched for the current data date.
+        if fetched.get('fetch_date') != last_op.get('date'):
+            cur_bid = cur_ask = 0.0
+            cur_last = 0.0
         if cur_bid == 0:
             cur_bid = float(last_op.get('option_bid', 0))
         if cur_ask == 0:
@@ -177,6 +183,30 @@ def main():
     # Theta: daily decay as % of market price, using market-consistent IV
     cur_theta_pct = ((b76(cur_vf75, cur_strike, max(0, (TENOR - 1) / 365), cur_iv_mid)
                       - ref_price) / ref_price * 100) if ref_price > 0 else 0.0
+
+    # ── Entry-side snapshot (for the Entry vs Current pair rows) ──────────────
+    # VIX spot on the entry date comes from features.csv; B76 theo + market mid
+    # come from the option_price.csv row logged that day (fall back to a
+    # recomputed B76 if the row is missing).
+    entry_vix = None
+    entry_b76 = 0.0
+    if in_pos and entry_date != '—':
+        m = feat[feat['Date'].astype(str).str[:10] == entry_date]
+        if len(m) > 0:
+            entry_vix = float(m.iloc[-1]['VIX'])
+        for r in op_rows:
+            if r.get('date') == entry_date:
+                try:
+                    entry_b76 = float(r.get('b76_mid', 0) or 0)
+                except ValueError:
+                    entry_b76 = 0.0
+        if entry_b76 <= 0:
+            entry_b76 = b76(entry_vf75, entry_strike, TENOR / 365, entry_sigma)
+
+    d_vf75     = (cur_vf75 - entry_vf75) if in_pos else 0.0
+    d_vf75_pct = (d_vf75 / entry_vf75 * 100) if (in_pos and entry_vf75) else 0.0
+    d_vix      = (cur_vix - entry_vix) if (in_pos and entry_vix is not None) else 0.0
+    d_mid      = (cur_mid_live - entry_mid) if (in_pos and entry_mid > 0) else 0.0
 
     # ── Performance stats ─────────────────────────────────────────────────────
     total_roi = sum(float(r['roi_pct']) for r in closed if r.get('roi_pct'))
@@ -231,6 +261,67 @@ def main():
       <span class="cond-thresh">{thresh}</span>
       <span class="cond-desc">{desc}</span>
     </div>'''
+
+    # ── Exit condition evaluation (mirrors eval_signal.evaluate_exit) ─────────
+    # ANY one of the 5 firing closes the position. Order matches eval_signal.
+    def trading_days_between(d1_str, d2_str):
+        """Approximate trading days (weekends only, no holiday calendar)."""
+        d1 = datetime.strptime(d1_str, '%Y-%m-%d').date()
+        d2 = datetime.strptime(d2_str, '%Y-%m-%d').date()
+        n, cur_d, end_d = 0, min(d1, d2), max(d1, d2)
+        while cur_d < end_d:
+            if cur_d.weekday() < 5:
+                n += 1
+            cur_d = cur_d.fromordinal(cur_d.toordinal() + 1)
+        return n
+
+    MIN_HOLD_TD = 20
+    td_held     = trading_days_between(entry_date, cur_date) if in_pos and entry_date != '—' else 0
+    hold_ok     = td_held >= MIN_HOLD_TD
+
+    # SL regime is LOCKED AT ENTRY (eval_signal uses sd84_at_entry), not today's sd84
+    eff_sd84      = sd84_entry if in_pos else cur_sd84
+    sl_regime_eff = 'calm' if eff_sd84 < SD84_T else 'volatile'
+
+    x1 = in_pos and spike_level is not None and cur_vf75 >= spike_level
+    x2 = in_pos and entry_mid > 0 and cur_roi <= -sl_now
+    x3 = in_pos and hold_ok and cur_macd < 0 and cur_vf75 < entry_vf75
+    x4 = in_pos and hold_ok and cur_sigma >= VOL_SIG
+    x5 = in_pos and days_held >= TENOR
+
+    s_macd_val  = f'{fn(cur_macd)} · {td_held}TD'      if in_pos else '—'
+    s_vf_vs_ent = 'below' if (in_pos and cur_vf75 < entry_vf75) else 'above'
+
+    exits = [
+        (x1, 'Spike TP',      fn(cur_vf75)   if in_pos else '—', f'≥ {spike_str}',
+         'VF75 spikes to μ84+2·sd84 — take profit'),
+        (x2, 'Stop loss',     fmt_roi(cur_roi) if in_pos else '—', f'≤ −{sl_now:.0f}%',
+         f'ROI on mid; {sl_regime_eff} regime locked at entry'),
+        (x3, 'MACD decay',    s_macd_val,                        '&lt; 0 &amp; VF75&lt;entry',
+         f'Momentum faded (VF75 {s_vf_vs_ent} entry); needs ≥{MIN_HOLD_TD} TD'),
+        (x4, 'Vol exit',      fn(cur_sigma)  if in_pos else '—', f'≥ {VOL_SIG}',
+         f'VVIX/100 blow-off; needs ≥{MIN_HOLD_TD} TD'),
+        (x5, 'Hard deadline', f'{days_held}d' if in_pos else '—', f'≥ {TENOR}d',
+         f'Calendar stop — {hard_deadline}'),
+    ]
+
+    exit_rows_html = ''
+    for fired, name, val, thresh, desc in exits:
+        icon = '⚑' if fired else '·'
+        cls  = 'cond-fire' if fired else 'cond-idle'
+        exit_rows_html += f'''
+    <div class="cond-row">
+      <span class="cond-icon {cls}">{icon}</span>
+      <span class="cond-name">{name}</span>
+      <span class="cond-val">{val}</span>
+      <span class="cond-thresh">{thresh}</span>
+      <span class="cond-desc">{desc}</span>
+    </div>'''
+
+    n_fired    = sum(1 for e in exits if e[0])
+    exit_note  = (f'{n_fired} triggered — SELL' if n_fired else
+                  ('none triggered — HOLD' if in_pos else 'no open position'))
+    exit_ncls  = 'red' if n_fired else ('gray' if not in_pos else 'green')
 
     # ── Chart data (2025+ or last 500 rows) ──────────────────────────────────
     h25 = feat[feat['Date'] >= '2025-01-01'].reset_index(drop=True)
@@ -301,11 +392,41 @@ def main():
     show_expiry    = entry_expiry if (in_pos and entry_expiry != '—') else cur_option_expiry
     s_days_held    = str(days_held)          if in_pos else '—'
     s_days_left    = str(cal_days_left)      if in_pos else '—'
-    sl_now         = sl_entry if in_pos else sl_level
-    s_sl_regime    = f'−{sl_now:.0f}% ({sl_regime} regime, sd84={"entry "+fn(sd84_entry) if in_pos else fn(cur_sd84)})'
+    s_sl_regime    = f'−{sl_now:.0f}% ({sl_regime_eff} regime, sd84={"entry "+fn(sd84_entry) if in_pos else fn(cur_sd84)})'
     sl_trigger_px  = max(0.0, entry_mid * (1 + (-sl_now) / 100))
     s_sl_trigger   = f'${fn(sl_trigger_px)}' if in_pos else '—'
     s_calc_entry_vf = fn(entry_vf75)        if in_pos else fn(cur_vf75)
+
+    # ── Summary pair-row strings (Entry row / Current row / Change row) ───────
+    def sgn(v, d=2, suffix=''):
+        return f'{"+" if v >= 0 else ""}{v:.{d}f}{suffix}'
+
+    def chg_cls(v):
+        return 'green' if v > 0 else ('red' if v < 0 else 'gray')
+
+    p_entry_vf75 = fn(entry_vf75)                       if in_pos else '—'
+    p_entry_b76  = f'${fn(entry_mid)}'                  if in_pos else '—'
+    p_entry_b76h = f'B76 theo ${fn(entry_b76)}'         if in_pos else 'no position'
+    p_entry_vix  = f'{entry_vix:.2f}'                   if (in_pos and entry_vix is not None) else '—'
+    p_entry_lbl  = f'Entry — {entry_date}'              if in_pos else 'Entry — none'
+
+    p_cur_vf75   = fn(cur_vf75)
+    p_cur_b76    = f'${fn(cur_mid_live)}'               if cur_mid_live > 0 else '—'
+    p_cur_b76h   = f'B76 theo ${fn(cur_b76mid)}'
+    p_cur_vix    = f'{cur_vix:.2f}'
+
+    p_chg_vf75   = f'{sgn(d_vf75, 3)} ({sgn(d_vf75_pct, 1)}%)' if in_pos else '—'
+    p_chg_b76    = f'{sgn(d_mid, 2, " ")}({fmt_roi(cur_roi)})' if in_pos and entry_mid > 0 else '—'
+    p_chg_vix    = sgn(d_vix, 2)                        if (in_pos and entry_vix is not None) else '—'
+    c_chg_vf75   = chg_cls(d_vf75)  if in_pos else 'gray'
+    c_chg_b76    = chg_cls(d_mid)   if in_pos else 'gray'
+    c_chg_vix    = chg_cls(d_vix)   if (in_pos and entry_vix is not None) else 'gray'
+
+    n_cond       = sum([c1, c2, c3, c4, c5, c6, c7, c8])
+    s_entry_strike = str(entry_strike) if in_pos else str(cur_strike)
+    s_strike_hint  = ('entry K, VF75 ' + fn(entry_vf75) + '×1.05') if in_pos \
+                     else 'target: next even ≥ VF75×1.05'
+    s_sigma_hint   = ('entry σ ' + fn(entry_sigma)) if in_pos else 'VVIX/100, floor 0.80'
 
     # ── Trade history table rows ──────────────────────────────────────────────
     # Includes the currently open trade (live, unrealized) plus all closed trades.
@@ -378,11 +499,24 @@ header{{background:#161b22;border-bottom:1px solid #30363d;padding:14px 24px;dis
 .header-right strong{{color:#c9d1d9}}
 main{{padding:18px 24px;max-width:1440px;margin:0 auto}}
 .sec{{font-size:11px;font-weight:700;color:#8b949e;text-transform:uppercase;letter-spacing:.9px;margin:18px 0 10px;padding-bottom:5px;border-bottom:1px solid #21262d}}
-.status-row{{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px}}
-.card{{background:#161b22;border:1px solid #30363d;border-radius:8px;padding:13px 15px}}
-.card .lbl{{font-size:11px;color:#8b949e;text-transform:uppercase;letter-spacing:.7px;margin-bottom:5px}}
-.card .val{{font-size:22px;font-weight:700}}
-.card .hint{{font-size:11px;color:#8b949e;margin-top:4px}}
+.status-row{{display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:8px}}
+.card{{background:#161b22;border:1px solid #30363d;border-radius:6px;padding:8px 10px}}
+.card .lbl{{font-size:10px;color:#8b949e;text-transform:uppercase;letter-spacing:.6px;margin-bottom:3px}}
+.card .val{{font-size:17px;font-weight:700;line-height:1.2}}
+.card .hint{{font-size:10px;color:#8b949e;margin-top:2px}}
+.sub-sec{{font-size:10px;font-weight:700;color:#6e7681;text-transform:uppercase;letter-spacing:.8px;margin:12px 0 6px}}
+.pair-tbl{{background:#161b22;border:1px solid #30363d;border-radius:6px;padding:0 12px;width:fit-content;max-width:100%}}
+.pair-head,.pair-row{{display:grid;grid-template-columns:118px repeat(3,124px);gap:8px;align-items:baseline}}
+.pair-head{{padding:7px 2px 5px;border-bottom:1px solid #21262d}}
+.pair-head span{{font-size:10px;color:#58a6ff;text-transform:uppercase;letter-spacing:.6px;font-weight:700}}
+.pair-row{{padding:6px 2px;border-bottom:1px solid #0d1117}}
+.pair-row:last-child{{border-bottom:none}}
+.pair-row .rk{{font-size:11px;color:#8b949e;font-weight:600}}
+.pair-row .rk em{{display:block;font-size:9px;color:#6e7681;font-style:normal;font-weight:400}}
+.pair-row .rv{{font-size:17px;font-weight:700;color:#e6edf3;line-height:1.25}}
+.pair-row .rv em{{display:block;font-size:10px;color:#8b949e;font-style:normal;font-weight:400}}
+.pair-chg .rv{{font-size:13px;font-weight:600}}
+.pair-entry{{background:rgba(88,166,255,0.04)}}
 .c-out{{border-color:#30363d}}.c-wait{{border-color:#9e6a03}}
 .c-entry{{border-color:#238636}}.c-in{{border-color:#1f6feb}}
 .green{{color:#3fb950}}.red{{color:#f85149}}.blue{{color:#58a6ff}}
@@ -393,17 +527,22 @@ main{{padding:18px 24px;max-width:1440px;margin:0 auto}}
 .alert-in{{background:#0a1628;border-color:#1f6feb;color:#58a6ff}}
 .chart-box{{background:#161b22;border:1px solid #30363d;border-radius:8px;padding:16px}}
 .chart-row{{display:grid;grid-template-columns:1fr 1fr;gap:14px}}
-.cond-panel{{background:#161b22;border:1px solid #30363d;border-radius:8px;padding:14px 16px}}
-.cond-header{{display:grid;grid-template-columns:28px 160px 120px 90px 1fr;gap:8px;padding:0 4px 8px;border-bottom:1px solid #21262d;margin-bottom:4px}}
-.cond-header span{{font-size:10px;color:#58a6ff;text-transform:uppercase;letter-spacing:.7px;font-weight:700}}
-.cond-row{{display:grid;grid-template-columns:28px 160px 120px 90px 1fr;gap:8px;padding:5px 4px;border-bottom:1px solid #0d1117;align-items:center}}
+.cond-grid{{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:start}}
+.cond-panel{{background:#161b22;border:1px solid #30363d;border-radius:8px;padding:10px 12px}}
+.cond-title{{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px}}
+.cond-title h3{{font-size:11px;color:#58a6ff;text-transform:uppercase;letter-spacing:.8px}}
+.cond-title .rule{{font-size:10px;color:#8b949e;font-style:italic}}
+.cond-header{{display:grid;grid-template-columns:18px 96px 88px 96px 1fr;gap:6px;padding:0 3px 6px;border-bottom:1px solid #21262d;margin-bottom:3px}}
+.cond-header span{{font-size:9px;color:#6e7681;text-transform:uppercase;letter-spacing:.6px;font-weight:700}}
+.cond-row{{display:grid;grid-template-columns:18px 96px 88px 96px 1fr;gap:6px;padding:4px 3px;border-bottom:1px solid #0d1117;align-items:center}}
 .cond-row:last-child{{border-bottom:none}}
-.cond-icon{{font-size:14px;font-weight:700;text-align:center}}
+.cond-icon{{font-size:12px;font-weight:700;text-align:center}}
 .cond-met{{color:#3fb950}}.cond-not{{color:#f85149}}
-.cond-name{{font-size:12px;font-weight:600;color:#e6edf3}}
-.cond-val{{font-size:12px;color:#58a6ff;font-family:monospace}}
-.cond-thresh{{font-size:11px;color:#8b949e}}
-.cond-desc{{font-size:11px;color:#8b949e;font-style:italic}}
+.cond-fire{{color:#f85149}}.cond-idle{{color:#484f58}}
+.cond-name{{font-size:11px;font-weight:600;color:#e6edf3}}
+.cond-val{{font-size:11px;color:#58a6ff;font-family:monospace}}
+.cond-thresh{{font-size:10px;color:#8b949e;font-family:monospace}}
+.cond-desc{{font-size:10px;color:#8b949e;font-style:italic}}
 .pos-groups{{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}}
 .pos-group{{background:#161b22;border:1px solid #30363d;border-radius:8px;padding:14px 16px}}
 .pos-group h3{{font-size:11px;color:#58a6ff;text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px;border-bottom:1px solid #21262d;padding-bottom:6px}}
@@ -451,58 +590,109 @@ td.green{{color:#3fb950}}td.red{{color:#f85149}}
 </header>
 <main>
 
-<!-- ═══ STATUS CARDS ════════════════════════════════════════════════════════ -->
+<!-- ═══ SUMMARY ═════════════════════════════════════════════════════════════ -->
 <div class="sec">Market Snapshot &amp; Position Status</div>
+
+<div class="sub-sec">Entry vs Current</div>
+<div class="pair-tbl">
+  <div class="pair-head">
+    <span></span><span>VF75</span><span>B76 / Option Mid</span><span>VIX Spot</span>
+  </div>
+  <div class="pair-row pair-entry">
+    <span class="rk">Entry<em>{entry_date if in_pos else 'not in position'}</em></span>
+    <span class="rv blue">{p_entry_vf75}</span>
+    <span class="rv blue">{p_entry_b76}<em>{p_entry_b76h}</em></span>
+    <span class="rv blue">{p_entry_vix}</span>
+  </div>
+  <div class="pair-row">
+    <span class="rk">Current<em>{cur_date}</em></span>
+    <span class="rv white">{p_cur_vf75}</span>
+    <span class="rv white">{p_cur_b76}<em>{p_cur_b76h}</em></span>
+    <span class="rv white">{p_cur_vix}</span>
+  </div>
+  <div class="pair-row pair-chg">
+    <span class="rk">Change</span>
+    <span class="rv {c_chg_vf75}">{p_chg_vf75}</span>
+    <span class="rv {c_chg_b76}">{p_chg_b76}</span>
+    <span class="rv {c_chg_vix}">{p_chg_vix}</span>
+  </div>
+</div>
+
+<div class="sub-sec">Trade Condition</div>
 <div class="status-row">
   <div class="card {pos_card_cls}">
     <div class="lbl">Position</div>
     <div class="val {signal_cls}">{signal_text}</div>
-    <div class="hint">{'Entry #'+str(position.get('trade_id','')) if in_pos else signal_j.get('note','')}</div>
+    <div class="hint">{'Trade #'+str(position.get('trade_id',''))+' · '+str(days_held)+'d held' if in_pos else signal_j.get('note','flat')}</div>
   </div>
   <div class="card c-out">
     <div class="lbl">Entry Signal</div>
-    <div class="val {'green' if all_entry else 'orange'}">{sum([c1,c2,c3,c4,c5,c6,c7,c8])}/8</div>
-    <div class="hint">conditions met</div>
-  </div>
-  <div class="card c-out">
-    <div class="lbl">VF75</div>
-    <div class="val white">{fn(cur_vf75)}</div>
-    <div class="hint">(VX60d+VX90d)/2</div>
-  </div>
-  <div class="card c-out">
-    <div class="lbl">VIX Spot</div>
-    <div class="val white">{cur_vix:.2f}</div>
-    <div class="hint">CBOE VIX index</div>
-  </div>
-  <div class="card c-out">
-    <div class="lbl">sigma_now</div>
-    <div class="val {'red' if cur_sigma>=1.5 else 'white'}">{fn(cur_sigma)}</div>
-    <div class="hint">VVIX/100, floor 0.80</div>
-  </div>
-  <div class="card c-out">
-    <div class="lbl">Strike K</div>
-    <div class="val white">{cur_strike}</div>
-    <div class="hint">next even ≥ VF75×1.05</div>
-  </div>
-  <div class="card c-out">
-    <div class="lbl">Mid (bid+ask)/2</div>
-    <div class="val white">${fn(cur_mid_live)}</div>
-    <div class="hint">B76 theo: ${fn(cur_b76mid)}</div>
+    <div class="val {'gray' if in_pos else ('green' if all_entry else 'orange')}">{n_cond}/8</div>
+    <div class="hint">{'n/a — already in position' if in_pos else ('all conditions met' if all_entry else 'conditions met')}</div>
   </div>
   <div class="card c-out">
     <div class="lbl">SL Regime</div>
-    <div class="val {'orange' if sl_regime=='volatile' else 'white'}">{sl_regime}</div>
-    <div class="hint">−{sl_level:.0f}%  sd84={fn(cur_sd84)}</div>
+    <div class="val {'orange' if sl_regime_eff=='volatile' else 'white'}">{sl_regime_eff}</div>
+    <div class="hint">−{sl_now:.0f}% · sd84 {fn(eff_sd84)}{' @entry' if in_pos else ''}</div>
+  </div>
+  <div class="card c-out">
+    <div class="lbl">SL Trigger</div>
+    <div class="val {'red' if in_pos else 'gray'}">{s_sl_trigger}</div>
+    <div class="hint">{'stop-out mid price' if in_pos else 'no position'}</div>
+  </div>
+  <div class="card c-out">
+    <div class="lbl">Spike TP</div>
+    <div class="val orange">{spike_str}</div>
+    <div class="hint">μ84 + 2·sd84 (VF75)</div>
   </div>
   <div class="card c-out">
     <div class="lbl">Current ROI</div>
     <div class="val {pos_roi_cls}">{pos_roi_str}</div>
-    <div class="hint">{'vs entry B76' if in_pos else 'no position'}</div>
+    <div class="hint">{'mid vs entry mid' if in_pos else 'no position'}</div>
   </div>
   <div class="card c-out">
     <div class="lbl">Total ROI</div>
     <div class="val {total_roi_cls}">{total_roi_str}</div>
-    <div class="hint">additive, {n_trades} closed trade{'s' if n_trades!=1 else ''}</div>
+    <div class="hint">additive, {n_trades} closed</div>
+  </div>
+</div>
+
+<div class="sub-sec">Option</div>
+<div class="status-row">
+  <div class="card c-out">
+    <div class="lbl">Strike K</div>
+    <div class="val white">{s_entry_strike}</div>
+    <div class="hint">{s_strike_hint}</div>
+  </div>
+  <div class="card c-out">
+    <div class="lbl">Sigma σ</div>
+    <div class="val {'red' if cur_sigma>=1.5 else 'white'}">{fn(cur_sigma)}</div>
+    <div class="hint">{s_sigma_hint}</div>
+  </div>
+  <div class="card c-out">
+    <div class="lbl">Market IV</div>
+    <div class="val white">{fn(cur_iv_mid, 3)}</div>
+    <div class="hint">back-solved from mid</div>
+  </div>
+  <div class="card c-out">
+    <div class="lbl">Bid / Ask</div>
+    <div class="val white" style="font-size:15px">{s_bid} / {s_ask}</div>
+    <div class="hint">last {s_last}</div>
+  </div>
+  <div class="card c-out">
+    <div class="lbl">Expiry</div>
+    <div class="val white" style="font-size:14px">{show_expiry}</div>
+    <div class="hint">tenor {TENOR}d</div>
+  </div>
+  <div class="card c-out">
+    <div class="lbl">Days Held</div>
+    <div class="val white">{s_days_held}</div>
+    <div class="hint">{s_days_left} left · HD {hard_deadline}</div>
+  </div>
+  <div class="card c-out">
+    <div class="lbl">Theta</div>
+    <div class="val red" style="font-size:15px">{cur_theta_pct:.2f}%/d</div>
+    <div class="hint">decay at market IV</div>
   </div>
 </div>
 
@@ -516,14 +706,31 @@ td.green{{color:#3fb950}}td.red{{color:#f85149}}
   <div id="priceChart" style="height:440px"></div>
 </div>
 
-<!-- ═══ ENTRY CONDITIONS ════════════════════════════════════════════════════ -->
-<div class="sec">Entry Conditions (today)</div>
-<div class="cond-panel">
-  <div class="cond-header">
-    <span></span><span>Condition</span><span>Today's Value</span>
-    <span>Threshold</span><span>Purpose</span>
+<!-- ═══ ENTRY / EXIT CONDITIONS ═════════════════════════════════════════════ -->
+<div class="sec">Entry &amp; Exit Conditions (today)</div>
+<div class="cond-grid">
+  <div class="cond-panel">
+    <div class="cond-title">
+      <h3>Entry — {n_cond}/8 met</h3>
+      <span class="rule">triggers only when <b>ALL 8</b> are met</span>
+    </div>
+    <div class="cond-header">
+      <span></span><span>Condition</span><span>Today</span>
+      <span>Threshold</span><span>Purpose</span>
+    </div>
+    {cond_rows_html}
   </div>
-  {cond_rows_html}
+  <div class="cond-panel">
+    <div class="cond-title">
+      <h3>Exit — <span class="{exit_ncls}">{exit_note}</span></h3>
+      <span class="rule">triggers on <b>ANY ONE</b> condition</span>
+    </div>
+    <div class="cond-header">
+      <span></span><span>Condition</span><span>Today</span>
+      <span>Threshold</span><span>Meaning</span>
+    </div>
+    {exit_rows_html}
+  </div>
 </div>
 
 <!-- ═══ POSITION DETAIL ══════════════════════════════════════════════════════ -->
@@ -933,11 +1140,13 @@ updateCalc();
 </body>
 </html>"""
 
-    out_path = DASH_DIR / 'index.html'
+    out_path = DASH_DIR / out_name
     out_path.write_text(html, encoding='utf-8')
     print(f'  Dashboard written: {out_path}')
     return str(out_path)
 
 
 if __name__ == '__main__':
-    main()
+    import sys
+    # --mock writes index_mock.html for local review (leaves live index.html alone)
+    main('index_mock.html' if '--mock' in sys.argv else 'index.html')
