@@ -1,33 +1,43 @@
 """
-notify.py  —  Email alert when the dashboard position flips IN or OUT.
+notify.py  —  Alert when the dashboard position flips IN or OUT.
 
 Called by run_daily.py only when position.json's `in_position` actually changed
 during the run (out -> in on a BUY, in -> out on a SELL or hard deadline).
 HOLD days send nothing.
 
-Credentials come from the environment (GitHub Actions secrets):
-  GMAIL_USER          Gmail address the alert is sent from
-  GMAIL_APP_PASSWORD  16-char Google App Password (NOT the account password)
-  NOTIFY_TO           recipient (default: laimanto@gmail.com)
+Delivery is GitHub's own notification system: the run opens an issue on this
+repo and assigns it to NOTIFY_ASSIGNEE. GitHub then emails that account.
+Assignment is what guarantees delivery — it notifies regardless of whether the
+account is "watching" the repo. The body also @-mentions the assignee as a
+second, independent trigger.
+
+No SMTP credentials and no repo secrets: Actions injects GITHUB_TOKEN
+automatically. The workflow only has to grant `issues: write`.
+
+Environment:
+  GITHUB_TOKEN        provided automatically by Actions
+  GITHUB_REPOSITORY   "owner/repo", set automatically by Actions
+  NOTIFY_ASSIGNEE     GitHub login to assign + mention (default: laimanto)
   DASHBOARD_URL       link included in the body
 
-A missing secret must never fail the daily pipeline, so send_position_change
-logs what it would have sent and returns False instead of raising.
+Outside Actions (local runs) GITHUB_TOKEN is absent, so the functions log what
+they would have posted and return False rather than raising.
 """
 
 import csv
+import json
 import os
-import smtplib
-from email.message import EmailMessage
+import urllib.error
+import urllib.request
 from pathlib import Path
 
 BASE_DIR = Path(__file__).parent.parent
 DATA_DIR = BASE_DIR / 'data'
 
-DEFAULT_TO   = 'laimanto@gmail.com'
-DEFAULT_DASH = 'https://laimanto.github.io/VF75-strategy/'
-SMTP_HOST    = os.environ.get('SMTP_HOST', 'smtp.gmail.com')
-SMTP_PORT    = int(os.environ.get('SMTP_PORT', '465'))
+DEFAULT_ASSIGNEE = 'laimanto'
+DEFAULT_REPO     = 'laimanto/VF75-strategy'
+DEFAULT_DASH     = 'https://laimanto.github.io/VF75-strategy/'
+API_ROOT         = 'https://api.github.com'
 
 # Reason codes produced by eval_signal.py
 EXIT_REASONS = {
@@ -51,103 +61,138 @@ def _trade_row(trade_id):
     return {}
 
 
-def _build_entered(position, fetched, dash_url):
+def _table(rows):
+    """Render (label, value) pairs as a GitHub markdown table."""
+    out = ['| | |', '|---|---|']
+    out += [f'| {label} | {"" if value is None else value} |' for label, value in rows]
+    return '\n'.join(out)
+
+
+def _build_entered(position, fetched, dash_url, mention):
     trade_id = position.get('trade_id')
-    subject  = f'[VF75] ENTERED position - trade #{trade_id}'
-    body = f"""The strategy has OPENED a position.
+    title = f'ENTERED position - trade #{trade_id}'
+    body = f"""{mention} — the strategy has **OPENED** a position.
 
-Signal:       BUY
-Date:         {fetched.get('fetch_date', '')}
-Trade ID:     {trade_id}
+{_table([
+    ('Signal',       '**BUY**'),
+    ('Date',         fetched.get('fetch_date', '')),
+    ('Trade ID',     trade_id),
+    ('Entry VF75',   position.get('entry_vf75')),
+    ('Strike',       position.get('strike')),
+    ('Entry mid',    position.get('entry_mid')),
+    ('Expiry',       position.get('expiry')),
+    ('Tenor',        f"{position.get('tenor')} calendar days"),
+    ('Sigma',        position.get('entry_sigma')),
+    ('sd84 @ entry', position.get('sd84_at_entry')),
+    ('Stop loss',    f"-{position.get('sl_used')}%"),
+    ('VIX',          fetched.get('vix')),
+    ('VVIX',         fetched.get('vvix')),
+])}
 
-Entry VF75:   {position.get('entry_vf75', '')}
-Strike:       {position.get('strike', '')}
-Entry mid:    {position.get('entry_mid', '')}
-Expiry:       {position.get('expiry', '')}
-Tenor:        {position.get('tenor', '')} calendar days
+[Open the dashboard]({dash_url})
 
-Sigma:        {position.get('entry_sigma', '')}
-sd84 @ entry: {position.get('sd84_at_entry', '')}
-Stop loss:    -{position.get('sl_used', '')}%
+> The model produces the signal — you still place the trade with your broker.
+> Confirm the strike and expiry are quoted before entering.
 
-VIX:          {fetched.get('vix', '')}
-VVIX:         {fetched.get('vvix', '')}
-
-Dashboard:    {dash_url}
-
-Reminder: the model produces the signal — you still place the trade with your
-broker. Confirm the strike and expiry are quoted before entering.
+Close this issue once you have placed the trade.
 """
-    return subject, body
+    return title, body
 
 
-def _build_exited(position, fetched, dash_url):
+def _build_exited(position, fetched, dash_url, mention):
     trade_id = position.get('last_trade_id', position.get('trade_id'))
     row      = _trade_row(trade_id)
     reason   = position.get('last_exit_reason') or row.get('exit_reason', '')
     roi      = position.get('last_roi_pct', row.get('roi_pct', ''))
     # Always show the sign, so a gain reads +116.79% and not a bare 116.79%.
     roi_str  = f'{roi:+}' if isinstance(roi, (int, float)) else str(roi)
-    subject  = (f'[VF75] EXITED position - trade #{trade_id} ({reason} {roi_str}%)'
-                if isinstance(roi, (int, float)) else
-                f'[VF75] EXITED position - trade #{trade_id} ({reason})')
-    body = f"""The strategy has CLOSED its position.
 
-Date:         {position.get('last_exit_date') or fetched.get('fetch_date', '')}
-Trade ID:     {trade_id}
-Exit reason:  {reason} - {EXIT_REASONS.get(reason, 'see dashboard')}
-Days held:    {row.get('days_held', '')} calendar days
-ROI (mid):    {roi_str}%
+    title = (f'EXITED position - trade #{trade_id} ({reason} {roi_str}%)'
+             if isinstance(roi, (int, float)) else
+             f'EXITED position - trade #{trade_id} ({reason})')
 
-Entry date:   {row.get('entry_date', '')}
-Entry mid:    {row.get('entry_mid', '')}
-Exit mid:     {row.get('exit_mid', '')}
-Entry VF75:   {row.get('entry_vf75', '')}
-Exit VF75:    {row.get('exit_vf75', '')}
-Strike:       {row.get('strike', '')}
-Expiry:       {row.get('expiry', '')}
+    body = f"""{mention} — the strategy has **CLOSED** its position.
 
-Dashboard:    {dash_url}
+{_table([
+    ('Date',        position.get('last_exit_date') or fetched.get('fetch_date', '')),
+    ('Trade ID',    trade_id),
+    ('Exit reason', f"**{reason}** — {EXIT_REASONS.get(reason, 'see dashboard')}"),
+    ('Days held',   f"{row.get('days_held', '')} calendar days"),
+    ('ROI (mid)',   f"**{roi_str}%**"),
+    ('Entry date',  row.get('entry_date', '')),
+    ('Entry mid',   row.get('entry_mid', '')),
+    ('Exit mid',    row.get('exit_mid', '')),
+    ('Entry VF75',  row.get('entry_vf75', '')),
+    ('Exit VF75',   row.get('exit_vf75', '')),
+    ('Strike',      row.get('strike', '')),
+    ('Expiry',      row.get('expiry', '')),
+])}
+
+[Open the dashboard]({dash_url})
 """
     cooldown = position.get('sl_cooldown_until')
     if cooldown:
-        body += (f'\nStop-loss cooldown active — no new entry until {cooldown}.\n')
-    body += ('\nReminder: the model produces the signal — you still close the trade\n'
-             'with your broker.\n')
-    return subject, body
+        body += f'\n> **Stop-loss cooldown active** — no new entry until {cooldown}.\n'
+    body += ('\n> The model produces the signal — you still close the trade with your broker.\n'
+             '\nClose this issue once you have closed the trade.\n')
+    return title, body
+
+
+def _create_issue(repo, token, title, body, assignee):
+    payload = json.dumps({
+        'title':     title,
+        'body':      body,
+        'assignees': [assignee] if assignee else [],
+    }).encode('utf-8')
+
+    req = urllib.request.Request(
+        f'{API_ROOT}/repos/{repo}/issues',
+        data=payload,
+        method='POST',
+        headers={
+            'Authorization':        f'Bearer {token}',
+            'Accept':               'application/vnd.github+json',
+            'X-GitHub-Api-Version': '2022-11-28',
+            'Content-Type':         'application/json',
+            'User-Agent':           'vf75-notify',
+        },
+    )
+    with urllib.request.urlopen(req, timeout=30) as resp:
+        return json.loads(resp.read().decode('utf-8'))
 
 
 def send_position_change(new_state, position, fetched=None, signal_info=None):
     """
-    Email the position flip.  `new_state` is 'IN' or 'OUT'.
-    Returns True if the mail was accepted by the SMTP server, else False.
+    Open a GitHub issue for the position flip.  `new_state` is 'IN' or 'OUT'.
+    GitHub emails the assignee. Returns True if the issue was created.
     """
-    fetched = fetched or {}
-
-    user = os.environ.get('GMAIL_USER', '').strip()
-    pw   = os.environ.get('GMAIL_APP_PASSWORD', '').strip()
-    to   = os.environ.get('NOTIFY_TO', DEFAULT_TO).strip()
-    dash = os.environ.get('DASHBOARD_URL', DEFAULT_DASH).strip()
+    fetched  = fetched or {}
+    token    = os.environ.get('GITHUB_TOKEN', '').strip()
+    repo     = os.environ.get('GITHUB_REPOSITORY', DEFAULT_REPO).strip()
+    assignee = os.environ.get('NOTIFY_ASSIGNEE', DEFAULT_ASSIGNEE).strip()
+    dash     = os.environ.get('DASHBOARD_URL', DEFAULT_DASH).strip()
+    mention  = f'@{assignee}' if assignee else ''
 
     if new_state == 'IN':
-        subject, body = _build_entered(position, fetched, dash)
+        title, body = _build_entered(position, fetched, dash, mention)
     else:
-        subject, body = _build_exited(position, fetched, dash)
+        title, body = _build_exited(position, fetched, dash, mention)
 
-    if not user or not pw:
-        print('  [notify] GMAIL_USER / GMAIL_APP_PASSWORD not set — email skipped')
-        print(f'  [notify] would have sent to {to}: {subject}')
+    if not token:
+        print('  [notify] GITHUB_TOKEN not set (running outside Actions?) — issue skipped')
+        print(f'  [notify] would have opened on {repo}: {title}')
         return False
 
-    msg = EmailMessage()
-    msg['Subject'] = subject
-    msg['From']    = user
-    msg['To']      = to
-    msg.set_content(body)
+    try:
+        issue = _create_issue(repo, token, title, body, assignee)
+    except urllib.error.HTTPError as e:
+        detail = e.read().decode('utf-8', 'replace')[:300]
+        # 403/404 here almost always means the workflow is missing
+        # `permissions: issues: write`.
+        print(f'  [notify] GitHub API {e.code} creating issue on {repo}: {detail}')
+        raise
 
-    with smtplib.SMTP_SSL(SMTP_HOST, SMTP_PORT, timeout=30) as smtp:
-        smtp.login(user, pw)
-        smtp.send_message(msg)
-
-    print(f'  [notify] sent "{subject}" to {to}')
+    print(f'  [notify] opened issue #{issue["number"]} "{title}" '
+          f'-> assigned to {assignee}')
+    print(f'  [notify] {issue["html_url"]}')
     return True

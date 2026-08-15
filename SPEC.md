@@ -34,7 +34,7 @@ production_manual_v33/
 │   ├── fetch_data.py              # daily data fetch
 │   ├── eval_signal.py             # rule-based signal evaluation
 │   ├── run_daily.py               # master orchestrator
-│   ├── notify.py                  # email alert when the position flips IN/OUT
+│   ├── notify.py                  # opens a GitHub issue when the position flips IN/OUT
 │   └── gen_dashboard.py           # HTML dashboard generator
 ├── index.html                     # generated daily; served via GitHub Pages (repo root)
 ├── .nojekyll                      # prevents Jekyll from processing Plotly template strings
@@ -374,9 +374,10 @@ run_daily.py
   │       │       If SL exit: set sl_cooldown_until = today + 20 trading days
   │       └── HOLD → no file changes
   ├── 3a. notify.py
-  │       └── If in_position flipped this run → email laimanto@gmail.com
-  │              out → in : "[VF75] ENTERED position - trade #N"
-  │              in → out : "[VF75] EXITED position - trade #N (REASON ±R%)"
+  │       └── If in_position flipped this run → open a GitHub issue assigned
+  │           to laimanto; GitHub emails the assignee
+  │              out → in : "ENTERED position - trade #N"
+  │              in → out : "EXITED position - trade #N (REASON ±R%)"
   │              unchanged: nothing sent
   ├── 4. append_daily_log()
   │       └── If in position: append one row to daily_log.csv with today's mid and ROI
@@ -457,30 +458,45 @@ If `git push` fails due to a concurrent push, it retries with `git pull --rebase
 `run_daily.py` records `in_position` before `manage_trade()` and compares it
 after. Only on an actual transition does it call `notify.send_position_change()`;
 a HOLD day logs `[skip] notify_position_change (position unchanged: ...)` and
-sends nothing. One email per flip, so at most one entry and one exit per trade.
+sends nothing. One alert per flip, so at most one entry and one exit per trade.
 
-Delivery is Gmail SMTP over SSL (`smtp.gmail.com:465`) using Python's stdlib
-`smtplib` — no extra dependency in `requirements.txt`.
+**Delivery is GitHub's own notification system — there are no SMTP credentials
+and no repo secrets to manage.** `notify.py` opens an issue on this repo and
+assigns it to `NOTIFY_ASSIGNEE`; GitHub emails the assignee. The POST uses
+stdlib `urllib.request`, so `requirements.txt` is unchanged.
+
+**Why assignment, not watching.** Being assigned to an issue notifies you
+unconditionally. Relying on "watching" the repo would depend on a per-account
+setting that can silently be off. The body also `@`-mentions the assignee as a
+second, independent trigger.
+
+**Why the bot actor matters.** GitHub suppresses notifications for your own
+activity. In Actions the issue is authored by `github-actions[bot]`, a different
+actor from the assignee, so the notification fires. An issue you create by hand
+on your own repo will **not** email you — that is expected, not a fault.
 
 **Environment (set in `daily_run.yml`):**
 
 | Variable | Source | Purpose |
 |----------|--------|---------|
-| `GMAIL_USER` | repo secret | Gmail address the alert is sent **from** |
-| `GMAIL_APP_PASSWORD` | repo secret | 16-char Google App Password |
-| `NOTIFY_TO` | literal in workflow | recipient — `laimanto@gmail.com` |
+| `GITHUB_TOKEN` | injected by Actions | authenticates the issue POST |
+| `GITHUB_REPOSITORY` | injected by Actions | `owner/repo` target |
+| `NOTIFY_ASSIGNEE` | literal in workflow | GitHub login to assign + mention — `laimanto` |
 | `DASHBOARD_URL` | literal in workflow | link included in the body |
 
-**One-time setup:** Gmail rejects plain-password SMTP, so enable 2-Step
-Verification, create an App Password at
-[myaccount.google.com/apppasswords](https://myaccount.google.com/apppasswords),
-then add both secrets under **Settings → Secrets and variables → Actions**.
+The workflow must grant `issues: write` under `permissions:`. Without it the
+API returns 403 and `notify.py` prints the status and response body.
 
-If either secret is absent `notify.py` prints
-`[notify] GMAIL_USER / GMAIL_APP_PASSWORD not set — email skipped` plus the
-subject it would have sent, and returns `False`. The call is also wrapped in
-`run_step()`, so an SMTP error is caught and logged. **A credential problem can
-never block the daily data update or the dashboard deploy.**
+**One-time setup:** none in this repo. Confirm **Email** is ticked for
+*Participating, @mentions and custom* at
+[github.com/settings/notifications](https://github.com/settings/notifications) —
+on by default.
+
+Run locally and `GITHUB_TOKEN` is absent, so `notify.py` prints
+`[notify] GITHUB_TOKEN not set (running outside Actions?) — issue skipped`
+plus the title it would have used, and returns `False`. The call is also wrapped
+in `run_step()`, so an API error is caught and logged. **A notification problem
+can never block the daily data update or the dashboard deploy.**
 
 ---
 
