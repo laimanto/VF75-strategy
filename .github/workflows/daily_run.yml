@@ -2,8 +2,13 @@ name: VF75 Strategy Daily Run
 
 on:
   schedule:
-    - cron: '35 20 * * 1-5'   # 4:35pm EDT (Mar–Nov, UTC-4)
-    - cron: '35 21 * * 1-5'   # 4:35pm EST (Nov–Mar, UTC-5)
+    # ONE entry only. Cron has no DST awareness, so listing a summer and a
+    # winter time does not alternate — GitHub fires both, every weekday, all
+    # year. 21:35 UTC is after the 16:00 ET close in both seasons:
+    #   EST (Nov–Mar) 16:35 ET   EDT (Mar–Nov) 17:35 ET
+    # 20:35 UTC is NOT safe: it is 15:35 ET in winter, 25 min before the close,
+    # which would evaluate signals on intraday prices.
+    - cron: '35 21 * * 1-5'
   workflow_dispatch:           # manual trigger from GitHub UI
 
 permissions:

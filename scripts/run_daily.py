@@ -195,6 +195,15 @@ def append_daily_log(fetched: dict, signal_info: dict, position: dict):
     days_held  = (today_dt - entry_dt).days
     roi_mid    = round((float(opt_mid) - entry_mid) / entry_mid * 100, 2) if entry_mid > 0 else 0.0
 
+    # Skip if the date is already logged, so a re-run cannot double the row
+    # (same guard as append_vx_history in fetch_data.py)
+    log_path = DATA_DIR / 'daily_log.csv'
+    if log_path.exists():
+        with open(log_path, encoding='utf-8-sig') as f:
+            if any(row.get('date') == today for row in csv.DictReader(f)):
+                print(f'  daily_log: {today} already present, skipping append')
+                return
+
     with open(DATA_DIR / 'daily_log.csv', 'a', newline='', encoding='utf-8') as f:
         csv.writer(f).writerow([today, round(float(vf75), 3), round(float(vix), 3),
                                  round(float(sigma), 4), opt_mid,

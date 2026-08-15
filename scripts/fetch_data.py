@@ -435,13 +435,19 @@ def main():
               if expiry not in ('estimated', str(ref_date)) else max(0, TENOR - days_held)
     b76mid = round(b76(vf75, strike, max(0, dte_rem / 365), sigma_used), 4)
 
-    # Append to option_price.csv
+    # Append to option_price.csv (skip if the date is already logged, so a
+    # re-run cannot double the row — same guard as append_vx_history)
     op_path = DATA_DIR / 'option_price.csv'
-    with open(op_path, 'a', newline='') as f:
-        csv.writer(f).writerow([ref_date, round(vf75, 3), strike, expiry,
-                                 opt_mid, opt_bid, opt_ask,
-                                 round(sigma_used, 4), b76mid, days_held, in_pos])
-    print(f'  option_price.csv: appended {ref_date}')
+    already = (op_path.exists()
+               and (pd.read_csv(op_path)['date'].astype(str) == str(ref_date)).any())
+    if already:
+        print(f'  option_price.csv: {ref_date} already present, skipping append')
+    else:
+        with open(op_path, 'a', newline='') as f:
+            csv.writer(f).writerow([ref_date, round(vf75, 3), strike, expiry,
+                                     opt_mid, opt_bid, opt_ask,
+                                     round(sigma_used, 4), b76mid, days_held, in_pos])
+        print(f'  option_price.csv: appended {ref_date}')
 
     # ── 6. Write fetched.json ──────────────────────────────────────────────────
     fetched = {
