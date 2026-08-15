@@ -1,0 +1,47 @@
+name: Send test alert
+
+# Manually-triggered drill for the position-change notification path.
+#
+# It must run here rather than locally: GitHub suppresses notifications for your
+# own activity, so an issue you post with your own token will never email you.
+# In Actions the author is github-actions[bot] — a different actor from the
+# assignee — so the assignment notification fires for real.
+#
+# Touches no data files and runs no part of the trading pipeline.
+
+on:
+  workflow_dispatch:
+    inputs:
+      alert:
+        description: 'Which alert to send'
+        required: true
+        default: 'entered'
+        type: choice
+        options:
+          - entered
+          - exited
+
+permissions:
+  issues: write
+
+jobs:
+  test-alert:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4.2.2
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5.6.0
+        with:
+          python-version: '3.11'
+
+      # notify.py only uses the standard library, so there is nothing to install.
+      - name: Post sample alert
+        run: python scripts/notify.py --sample "${{ inputs.alert }}"
+        env:
+          GITHUB_TOKEN:    ${{ secrets.GITHUB_TOKEN }}
+          NOTIFY_ASSIGNEE: laimanto
+          DASHBOARD_URL:   https://laimanto.github.io/VF75-strategy/

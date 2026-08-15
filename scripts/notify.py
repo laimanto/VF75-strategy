@@ -99,9 +99,9 @@ Close this issue once you have placed the trade.
     return title, body
 
 
-def _build_exited(position, fetched, dash_url, mention):
+def _build_exited(position, fetched, dash_url, mention, row=None):
     trade_id = position.get('last_trade_id', position.get('trade_id'))
-    row      = _trade_row(trade_id)
+    row      = _trade_row(trade_id) if row is None else row
     reason   = position.get('last_exit_reason') or row.get('exit_reason', '')
     roi      = position.get('last_roi_pct', row.get('roi_pct', ''))
     # Always show the sign, so a gain reads +116.79% and not a bare 116.79%.
@@ -161,10 +161,14 @@ def _create_issue(repo, token, title, body, assignee):
         return json.loads(resp.read().decode('utf-8'))
 
 
-def send_position_change(new_state, position, fetched=None, signal_info=None):
+def send_position_change(new_state, position, fetched=None, signal_info=None,
+                         sample=False, row=None):
     """
     Open a GitHub issue for the position flip.  `new_state` is 'IN' or 'OUT'.
     GitHub emails the assignee. Returns True if the issue was created.
+
+    sample=True marks the issue as a drill: the title is prefixed [TEST] and a
+    banner is prepended, so it can never be mistaken for a live signal.
     """
     fetched  = fetched or {}
     token    = os.environ.get('GITHUB_TOKEN', '').strip()
@@ -176,7 +180,16 @@ def send_position_change(new_state, position, fetched=None, signal_info=None):
     if new_state == 'IN':
         title, body = _build_entered(position, fetched, dash, mention)
     else:
-        title, body = _build_exited(position, fetched, dash, mention)
+        title, body = _build_exited(position, fetched, dash, mention, row=row)
+
+    if sample:
+        title = f'[TEST] {title}'
+        body  = ('> [!WARNING]\n'
+                 '> **Test alert — not a real signal.** No trade was opened or '
+                 'closed, and no data file was changed. Triggered by hand from '
+                 'the *Send test alert* workflow to check that GitHub '
+                 'notifications reach your inbox. Safe to close.\n\n'
+                 '---\n\n') + body
 
     if not token:
         print('  [notify] GITHUB_TOKEN not set (running outside Actions?) — issue skipped')
@@ -196,3 +209,53 @@ def send_position_change(new_state, position, fetched=None, signal_info=None):
           f'-> assigned to {assignee}')
     print(f'  [notify] {issue["html_url"]}')
     return True
+
+
+# ── Sample alerts ─────────────────────────────────────────────────────────────
+# `python scripts/notify.py --sample entered|exited` posts a clearly-marked test
+# alert. Run from Actions so the author is github-actions[bot]; GitHub suppresses
+# notifications for your own activity, so a locally-posted test will not email.
+
+SAMPLE_FETCHED = {
+    'fetch_date': '2026-08-17', 'vf75': 20.178, 'vix': 19.49, 'vvix': 99.5,
+}
+
+SAMPLE_ENTERED = {
+    'in_position': True, 'trade_id': 2, 'entry_date': '2026-08-17',
+    'entry_vf75': 20.178, 'entry_sigma': 0.9619, 'sd84_at_entry': 1.2999,
+    'sl_used': 38.0, 'strike': 22, 'entry_mid': 2.70,
+    'expiry': '2026-11-18', 'tenor': 75, 'sl_cooldown_until': None,
+}
+
+SAMPLE_EXITED = {
+    'in_position': False, 'last_trade_id': 1, 'last_exit_date': '2026-08-17',
+    'last_exit_reason': 'SPIKE_TP', 'last_roi_pct': 116.79,
+    'sl_cooldown_until': None,
+}
+
+SAMPLE_EXIT_ROW = {
+    'trade_id': '1', 'entry_date': '2026-07-21', 'entry_vf75': '20.113',
+    'strike': '22', 'entry_mid': '2.74', 'expiry': '2026-10-21',
+    'exit_date': '2026-08-17', 'exit_vf75': '26.884', 'exit_mid': '5.94',
+    'days_held': '27', 'roi_pct': '116.79', 'exit_reason': 'SPIKE_TP',
+}
+
+
+def main():
+    import argparse
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--sample', choices=['entered', 'exited'], required=True,
+                        help='which alert to post as a marked test')
+    args = parser.parse_args()
+
+    if args.sample == 'entered':
+        ok = send_position_change('IN', SAMPLE_ENTERED, SAMPLE_FETCHED, {},
+                                  sample=True)
+    else:
+        ok = send_position_change('OUT', SAMPLE_EXITED, SAMPLE_FETCHED, {},
+                                  sample=True, row=SAMPLE_EXIT_ROW)
+    raise SystemExit(0 if ok else 1)
+
+
+if __name__ == '__main__':
+    main()
