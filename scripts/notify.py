@@ -86,16 +86,18 @@ def _build_exited(position, fetched, dash_url):
     row      = _trade_row(trade_id)
     reason   = position.get('last_exit_reason') or row.get('exit_reason', '')
     roi      = position.get('last_roi_pct', row.get('roi_pct', ''))
-    subject  = f'[VF75] EXITED position - trade #{trade_id} ({reason} {roi:+}%)' \
-               if isinstance(roi, (int, float)) else \
-               f'[VF75] EXITED position - trade #{trade_id} ({reason})'
+    # Always show the sign, so a gain reads +116.79% and not a bare 116.79%.
+    roi_str  = f'{roi:+}' if isinstance(roi, (int, float)) else str(roi)
+    subject  = (f'[VF75] EXITED position - trade #{trade_id} ({reason} {roi_str}%)'
+                if isinstance(roi, (int, float)) else
+                f'[VF75] EXITED position - trade #{trade_id} ({reason})')
     body = f"""The strategy has CLOSED its position.
 
 Date:         {position.get('last_exit_date') or fetched.get('fetch_date', '')}
 Trade ID:     {trade_id}
 Exit reason:  {reason} - {EXIT_REASONS.get(reason, 'see dashboard')}
 Days held:    {row.get('days_held', '')} calendar days
-ROI (mid):    {roi}%
+ROI (mid):    {roi_str}%
 
 Entry date:   {row.get('entry_date', '')}
 Entry mid:    {row.get('entry_mid', '')}
