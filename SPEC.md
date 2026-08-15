@@ -34,6 +34,7 @@ production_manual_v33/
 │   ├── fetch_data.py              # daily data fetch
 │   ├── eval_signal.py             # rule-based signal evaluation
 │   ├── run_daily.py               # master orchestrator
+│   ├── notify.py                  # email alert when the position flips IN/OUT
 │   └── gen_dashboard.py           # HTML dashboard generator
 ├── index.html                     # generated daily; served via GitHub Pages (repo root)
 ├── .nojekyll                      # prevents Jekyll from processing Plotly template strings
@@ -372,6 +373,11 @@ run_daily.py
   │       ├── SELL / Hard Deadline → update trades.csv row (close), update position.json
   │       │       If SL exit: set sl_cooldown_until = today + 20 trading days
   │       └── HOLD → no file changes
+  ├── 3a. notify.py
+  │       └── If in_position flipped this run → email laimanto@gmail.com
+  │              out → in : "[VF75] ENTERED position - trade #N"
+  │              in → out : "[VF75] EXITED position - trade #N (REASON ±R%)"
+  │              unchanged: nothing sent
   ├── 4. append_daily_log()
   │       └── If in position: append one row to daily_log.csv with today's mid and ROI
   └── 5. gen_dashboard.py
@@ -445,6 +451,36 @@ index.html
 ```
 
 If `git push` fails due to a concurrent push, it retries with `git pull --rebase -X theirs`.
+
+### 9.8 Email Alert on Position Change
+
+`run_daily.py` records `in_position` before `manage_trade()` and compares it
+after. Only on an actual transition does it call `notify.send_position_change()`;
+a HOLD day logs `[skip] notify_position_change (position unchanged: ...)` and
+sends nothing. One email per flip, so at most one entry and one exit per trade.
+
+Delivery is Gmail SMTP over SSL (`smtp.gmail.com:465`) using Python's stdlib
+`smtplib` — no extra dependency in `requirements.txt`.
+
+**Environment (set in `daily_run.yml`):**
+
+| Variable | Source | Purpose |
+|----------|--------|---------|
+| `GMAIL_USER` | repo secret | Gmail address the alert is sent **from** |
+| `GMAIL_APP_PASSWORD` | repo secret | 16-char Google App Password |
+| `NOTIFY_TO` | literal in workflow | recipient — `laimanto@gmail.com` |
+| `DASHBOARD_URL` | literal in workflow | link included in the body |
+
+**One-time setup:** Gmail rejects plain-password SMTP, so enable 2-Step
+Verification, create an App Password at
+[myaccount.google.com/apppasswords](https://myaccount.google.com/apppasswords),
+then add both secrets under **Settings → Secrets and variables → Actions**.
+
+If either secret is absent `notify.py` prints
+`[notify] GMAIL_USER / GMAIL_APP_PASSWORD not set — email skipped` plus the
+subject it would have sent, and returns `False`. The call is also wrapped in
+`run_step()`, so an SMTP error is caught and logged. **A credential problem can
+never block the daily data update or the dashboard deploy.**
 
 ---
 

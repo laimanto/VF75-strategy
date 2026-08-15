@@ -45,6 +45,12 @@ jobs:
         run: python scripts/run_daily.py
         env:
           PYTHONPATH: ${{ github.workspace }}/scripts
+          # Email alert on position flip (IN / OUT). If the secrets are absent
+          # notify.py logs and skips — it never fails the run.
+          GMAIL_USER:         ${{ secrets.GMAIL_USER }}
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+          NOTIFY_TO:          laimanto@gmail.com
+          DASHBOARD_URL:      https://laimanto.github.io/VF75-strategy/
 
       - name: Commit updated data + dashboard
         run: |

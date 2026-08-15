@@ -6,6 +6,7 @@ Sequence:
   1. fetch_data    — VX futures + VVIX + VIX + VIX option bid/ask
   2. eval_signal   — rule-based BUY / SELL / HOLD
   3. manage_trade  — open on BUY, close on SELL/deadline, track SL cooldown
+  3a. notify       — email alert if the position flipped IN or OUT
   4. append_daily_log
   5. gen_dashboard — write dashboard/index.html
 """
@@ -124,7 +125,9 @@ def manage_trade(fetched: dict, signal_info: dict, position: dict) -> dict:
         entry_dt   = datetime.strptime(entry_date, '%Y-%m-%d').date()
         today_dt   = datetime.strptime(today, '%Y-%m-%d').date()
         days_held  = (today_dt - entry_dt).days
-        opt_mid    = float(fetched.get('option_mid', opt_bid))
+        # opt_mid is already read from fetched at the top of manage_trade; the
+        # old default referenced an undefined `opt_bid` and raised NameError on
+        # every close, so no exit could ever complete.
         roi_pct    = round((opt_mid - entry_mid) / entry_mid * 100, 2) if entry_mid > 0 else 0.0
         exit_vf75  = round(vf75, 3)
 
@@ -232,6 +235,8 @@ def main():
     position    = json.loads(position_path.read_text()) if position_path.exists() else {}
 
     # ── Step 3: Manage trade ───────────────────────────────────────────────────
+    was_in_position = bool(position.get('in_position', False))
+
     position = run_step('manage_trade',
                         lambda: manage_trade(fetched, signal_info, position))
     if position is None:
@@ -239,6 +244,17 @@ def main():
 
     # Reload position (may have changed)
     position = json.loads(position_path.read_text())
+
+    # ── Step 3a: Email alert on position flip ──────────────────────────────────
+    # Fires only on a real out->in / in->out transition; HOLD days send nothing.
+    now_in_position = bool(position.get('in_position', False))
+    if now_in_position != was_in_position:
+        import notify
+        run_step('notify_position_change', lambda: notify.send_position_change(
+            'IN' if now_in_position else 'OUT', position, fetched, signal_info))
+    else:
+        print(f'\n[skip] notify_position_change (position unchanged: '
+              f'in_position={now_in_position})')
 
     # ── Step 4: Daily log ──────────────────────────────────────────────────────
     run_step('append_daily_log', lambda: append_daily_log(fetched, signal_info, position))
