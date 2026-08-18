@@ -1,5 +1,4 @@
 {
-  "signal": "HOLD",
-  "exit_reason": null,
-  "days_held_trading": 19
+  "signal": "SELL",
+  "exit_reason": "MACD_DECAY"
 }
