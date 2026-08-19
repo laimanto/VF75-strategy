@@ -1,4 +1,53 @@
 {
-  "signal": "SELL",
-  "exit_reason": "MACD_DECAY"
+  "signal": "HOLD",
+  "exit_reason": null,
+  "conditions_met": 7,
+  "conditions_total": 9,
+  "conditions": {
+    "pct_rank84": {
+      "met": true,
+      "value": 0.301,
+      "threshold": "<= 0.5"
+    },
+    "macd_5_13": {
+      "met": false,
+      "value": -0.0352,
+      "threshold": "> 0"
+    },
+    "roc_3m": {
+      "met": false,
+      "value": -8.03,
+      "threshold": ">= -8.0%"
+    },
+    "roc_1m": {
+      "met": true,
+      "value": -0.72,
+      "threshold": ">= -5.0%"
+    },
+    "vf75_below_ema63": {
+      "met": true,
+      "value": 19.969,
+      "threshold": "< EMA63 (20.359)"
+    },
+    "ema63_gap": {
+      "met": true,
+      "value": 1.92,
+      "threshold": "<= 3.5000000000000004%"
+    },
+    "atr10_filter": {
+      "met": true,
+      "value": -0.932,
+      "threshold": "> -1.0"
+    },
+    "vix_spread": {
+      "met": true,
+      "value": -5.08,
+      "threshold": "< -1.0"
+    },
+    "sl_cooldown": {
+      "met": true,
+      "value": "none",
+      "threshold": "not in cooldown"
+    }
+  }
 }
