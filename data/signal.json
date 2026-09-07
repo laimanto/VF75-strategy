@@ -1,7 +1,7 @@
 {
   "signal": "HOLD",
   "exit_reason": null,
-  "conditions_met": 4,
+  "conditions_met": 5,
   "conditions_total": 9,
   "conditions": {
     "pct_rank84": {
@@ -11,27 +11,27 @@
     },
     "macd_5_13": {
       "met": false,
-      "value": -0.278,
+      "value": -0.2832,
       "threshold": "> 0"
     },
     "roc_3m": {
       "met": false,
-      "value": -9.33,
+      "value": -11.5,
       "threshold": ">= -8.0%"
     },
     "roc_1m": {
-      "met": false,
-      "value": -5.16,
+      "met": true,
+      "value": -4.77,
       "threshold": ">= -5.0%"
     },
     "vf75_below_ema63": {
       "met": true,
       "value": 18.719,
-      "threshold": "< EMA63 (20.004)"
+      "threshold": "< EMA63 (19.964)"
     },
     "ema63_gap": {
       "met": false,
-      "value": 6.42,
+      "value": 6.24,
       "threshold": "<= 3.5000000000000004%"
     },
     "atr10_filter": {
@@ -41,7 +41,7 @@
     },
     "vix_spread": {
       "met": true,
-      "value": -4.19,
+      "value": -3.42,
       "threshold": "< -1.0"
     },
     "sl_cooldown": {
