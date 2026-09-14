@@ -1,8 +1,14 @@
 {
-  "in_position": false,
-  "last_trade_id": 1,
-  "last_exit_date": "2026-08-18",
-  "last_exit_reason": "MACD_DECAY",
-  "last_roi_pct": -27.37,
+  "in_position": true,
+  "trade_id": 2,
+  "entry_date": "2026-09-14",
+  "entry_vf75": 19.528,
+  "entry_sigma": 0.8,
+  "sd84_at_entry": 0.8001,
+  "sl_used": 35.0,
+  "strike": 22,
+  "entry_mid": 1.79,
+  "expiry": "2026-11-18",
+  "tenor": 75,
   "sl_cooldown_until": null
 }
