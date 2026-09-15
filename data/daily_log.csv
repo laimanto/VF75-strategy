@@ -1,2 +1,3 @@
 date,vf75,vix,sigma_now,option_mid,signal,in_position,days_held,roi_mid
 2026-09-14,19.528,17.1,0.8,1.79,BUY,True,0,0.0
+2026-09-15,19.166,17.2,0.8,1.72,HOLD,True,1,-3.91

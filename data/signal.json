@@ -1,53 +1,5 @@
 {
-  "signal": "BUY",
+  "signal": "HOLD",
   "exit_reason": null,
-  "conditions_met": 9,
-  "conditions_total": 9,
-  "conditions": {
-    "pct_rank84": {
-      "met": true,
-      "value": 0.145,
-      "threshold": "<= 0.5"
-    },
-    "macd_5_13": {
-      "met": true,
-      "value": 0.0763,
-      "threshold": "> 0"
-    },
-    "roc_3m": {
-      "met": true,
-      "value": -6.2,
-      "threshold": ">= -8.0%"
-    },
-    "roc_1m": {
-      "met": true,
-      "value": -0.69,
-      "threshold": ">= -5.0%"
-    },
-    "vf75_below_ema63": {
-      "met": true,
-      "value": 19.528,
-      "threshold": "< EMA63 (19.855)"
-    },
-    "ema63_gap": {
-      "met": true,
-      "value": 1.65,
-      "threshold": "<= 3.5000000000000004%"
-    },
-    "atr10_filter": {
-      "met": true,
-      "value": 2.851,
-      "threshold": "> -1.0"
-    },
-    "vix_spread": {
-      "met": true,
-      "value": -2.43,
-      "threshold": "< -1.0"
-    },
-    "sl_cooldown": {
-      "met": true,
-      "value": "none",
-      "threshold": "not in cooldown"
-    }
-  }
+  "days_held_trading": 1
 }
