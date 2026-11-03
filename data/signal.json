@@ -1,7 +1,7 @@
 {
   "signal": "HOLD",
   "exit_reason": null,
-  "conditions_met": 7,
+  "conditions_met": 8,
   "conditions_total": 9,
   "conditions": {
     "pct_rank84": {
@@ -11,27 +11,27 @@
     },
     "macd_5_13": {
       "met": true,
-      "value": 0.1502,
+      "value": 0.0761,
       "threshold": "> 0"
     },
     "roc_3m": {
       "met": true,
-      "value": -4.55,
+      "value": -4.84,
       "threshold": ">= -8.0%"
     },
     "roc_1m": {
       "met": true,
-      "value": 1.54,
+      "value": 0.47,
       "threshold": ">= -5.0%"
     },
     "vf75_below_ema63": {
       "met": true,
       "value": 19.135,
-      "threshold": "< EMA63 (19.294)"
+      "threshold": "< EMA63 (19.289)"
     },
     "ema63_gap": {
       "met": true,
-      "value": 0.82,
+      "value": 0.8,
       "threshold": "<= 3.5000000000000004%"
     },
     "atr10_filter": {
@@ -41,11 +41,11 @@
     },
     "vix_spread": {
       "met": false,
-      "value": 0.28,
+      "value": 2.01,
       "threshold": "< -1.0"
     },
     "sl_cooldown": {
-      "met": false,
+      "met": true,
       "value": "2026-11-03",
       "threshold": "not in cooldown"
     }
